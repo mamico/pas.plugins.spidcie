@@ -55,6 +55,7 @@ setup(
         "plone.api",
         "plone.restapi>=8.34.0",
         "oic",
+        "cryptojwt>=1.8.2",
     ],
     extras_require={
         "test": [
