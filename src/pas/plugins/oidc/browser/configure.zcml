@@ -37,10 +37,11 @@
       layer="pas.plugins.oidc.interfaces.IPasPluginsOidcLayer"
       />
 
+  <!-- TODO: spostare sulla root del sito -->
   <browser:page
       name=".well-known"
       for="pas.plugins.oidc.plugins.IOIDCPlugin"
-      class=".view.EntityConfiguration"
+      class=".wellknown.EntityConfiguration"
       permission="zope2.View"
       layer="pas.plugins.oidc.interfaces.IPasPluginsOidcLayer"
       />

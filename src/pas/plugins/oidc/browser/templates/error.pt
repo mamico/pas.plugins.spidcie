@@ -1,0 +1,9 @@
+<html
+    xmlns:tal="http://xml.zope.org/namespaces/tal"
+>
+    <head></head>
+    <body>
+        <h1 tal:content="options/error|nothing"></h1>
+        <p tal:content="options/error_description|nothing"></p>
+    </body>
+</html>

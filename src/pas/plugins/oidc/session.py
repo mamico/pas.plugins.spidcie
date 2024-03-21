@@ -1,11 +1,14 @@
-from plone import api
-
-import base64
-import json
-from zope.annotation.interfaces import IAnnotations
 from persistent.mapping import PersistentMapping
+from plone import api
+from zope.annotation.interfaces import IAnnotations
+
+
+# import base64
+# import json
+
 
 SESSION_KEY = "pas.plugins.oidc.session"
+
 
 class Session:
     session_cookie_name: str = "__ac_session"
@@ -19,7 +22,7 @@ class Session:
         if SESSION_KEY not in IAnnotations(portal):
             IAnnotations(portal)[SESSION_KEY] = PersistentMapping()
         self._session = IAnnotations(portal)[SESSION_KEY]
-    
+
         # self.use_session_data_manager = use_session_data_manager
         # if self.use_session_data_manager:
         #     sdm = api.portal.get_tool("session_data_manager")
@@ -47,7 +50,7 @@ class Session:
         return self._session[name]
         # if self.use_session_data_manager:
         return self._session.get(name)
-    
+
     def keys(self):
         return self._session.keys()
 

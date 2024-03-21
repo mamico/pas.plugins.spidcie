@@ -4,6 +4,8 @@
     >
 
   <!-- OIDC authentication services -->
+
+  <!-- TODO
   <plone:service
       method="GET"
       factory=".oidc.Get"
@@ -27,5 +29,6 @@
       permission="zope.Public"
       name="@login-oidc"
       />
+   -->
 
 </configure>

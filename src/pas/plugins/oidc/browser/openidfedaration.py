@@ -1,4 +1,4 @@
-def get_federation_entity(entity_id: str=None) -> dict:
+def get_federation_entity(entity_id: str = None) -> dict:
     """
     Retrieve the federation entity metadata for the given entity ID.
     """

@@ -1,5 +1,9 @@
+from .jwtse import unpad_jwt_head
+from datetime import datetime
+from datetime import timedelta
 from hashlib import sha256
-from oic import rndstr
+
+# from oic import rndstr
 from oic.exception import RequestError
 from oic.oic import message
 from pas.plugins.oidc import logger
@@ -7,22 +11,23 @@ from pas.plugins.oidc import PLUGIN_ID
 from pas.plugins.oidc import plugins
 from pas.plugins.oidc.session import Session
 from plone import api
+from plone.app.event.base import FALLBACK_TIMEZONE
+from plone.app.event.base import replacement_zones
+from plone.event.utils import default_timezone as fallback_default_timezone
+from plone.event.utils import validated_timezone
+from plone.registry.interfaces import IRegistry
+from secrets import token_hex
 from typing import Union
+from zope.component import getUtility
 
 import base64
-import re
-from secrets import token_hex
-# from spid_cie_oidc.entity.jwtse import unpad_jwt_head
-# from spid_cie_oidc.entity.settings import HTTPC_PARAMS
-# from spid_cie_oidc.entity.statements import get_http_url
-
-from datetime import timedelta
-
-import datetime
+import hashlib
 import json
-import logging
-
-logger = logging.getLogger(__name__)
+import os
+import pytz
+import random
+import re
+import requests
 
 
 def boolean_string_ser(val, sformat=None, lev=0):
@@ -96,21 +101,21 @@ def get_plugin() -> plugins.OIDCPlugin:
 
 
 # Flow: Start
-def initialize_session(plugin: plugins.OIDCPlugin, request) -> Session:
-    """Initialize a Session."""
-    use_session_data_manager: bool = plugin.getProperty("use_session_data_manager")
-    use_pkce: bool = plugin.getProperty("use_pkce")
-    session = Session(request, use_session_data_manager)
-    # state is used to keep track of responses to outstanding requests (state).
-    # nonce is a string value used to associate a Client session with an ID Token, and to mitigate replay attacks.
-    session.set("state", rndstr())
-    session.set("nonce", rndstr())
-    came_from = request.get("came_from")
-    if came_from:
-        session.set("came_from", came_from)
-    if use_pkce:
-        session.set("verifier", rndstr(128))
-    return session
+# def initialize_session(plugin: plugins.OIDCPlugin, request) -> Session:
+#     """Initialize a Session."""
+#     use_session_data_manager: bool = plugin.getProperty("use_session_data_manager")
+#     use_pkce: bool = plugin.getProperty("use_pkce")
+#     session = Session(request, use_session_data_manager)
+#     # state is used to keep track of responses to outstanding requests (state).
+#     # nonce is a string value used to associate a Client session with an ID Token, and to mitigate replay attacks.
+#     session.set("state", rndstr())
+#     session.set("nonce", rndstr())
+#     came_from = request.get("came_from")
+#     if came_from:
+#         session.set("came_from", came_from)
+#     if use_pkce:
+#         session.set("verifier", rndstr(128))
+#     return session
 
 
 def pkce_code_verifier_challenge(value: str) -> str:
@@ -217,19 +222,17 @@ def get_user_info(client, state, args) -> Union[message.OpenIDSchema, dict]:
     return user_info
 
 
-def process_came_from(session: Session, came_from: str = "") -> str:
-    if not came_from:
-        came_from = session.get("came_from")
+def process_came_from(came_from: str = "") -> str:
     portal_url = api.portal.get_tool("portal_url")
     if not (came_from and portal_url.isURLInPortal(came_from)):
         came_from = api.portal.get().absolute_url()
     return url_cleanup(came_from)
 
+
 # --- SPID/CIE OIDC FED
 
-SIGNING_ALG_VALUES_SUPPORTED = ["RS256", "RS384", "RS512", "ES256", "ES384", "ES512"]
-
 # utils.py
+
 
 def iat_now() -> int:
     return int(datetime.now().timestamp())
@@ -240,45 +243,19 @@ def exp_from_now(minutes: int = 33) -> int:
     return int((_now + timedelta(minutes=minutes)).timestamp())
 
 
-def datetime_from_timestamp(value) -> datetime.datetime:
-    return make_aware(datetime.datetime.fromtimestamp(value))
-
-
-def get_jwks(metadata: dict, federation_jwks:list = []) -> dict:
-    """
-    get jwks or jwks_uri or signed_jwks_uri
-    """
-    jwks_list = []
-    if metadata.get('jwks'):
-        jwks_list = metadata["jwks"]["keys"]
-    elif metadata.get('jwks_uri'):
-        try:
-            jwks_uri = metadata["jwks_uri"]
-            jwks_list = get_http_url(
-                [jwks_uri], httpc_params=HTTPC_PARAMS
-            )
-            jwks_list = json.loads(jwks_list[0])
-        except Exception as e:
-            logger.error(f"Failed to download jwks from {jwks_uri}: {e}")
-    elif metadata.get('signed_jwks_uri'):
-        try:
-            signed_jwks_uri = metadata["signed_jwks_uri"]
-            jwks_list = get_http_url(
-                [signed_jwks_uri], httpc_params=HTTPC_PARAMS
-            )[0]
-        except Exception as e:
-            logger.error(f"Failed to download jwks from {signed_jwks_uri}: {e}")
-    return jwks_list
+def datetime_from_timestamp(value) -> datetime:
+    # return make_aware(datetime.fromtimestamp(value))
+    return datetime.fromtimestamp(value).astimezone(pytz.utc)
 
 
 def get_jwk_from_jwt(jwt: str, provider_jwks: dict) -> dict:
     """
-        docs here
+    docs here
     """
     head = unpad_jwt_head(jwt)
     kid = head["kid"]
-    if isinstance(provider_jwks, dict) and provider_jwks.get('keys'):
-        provider_jwks = provider_jwks['keys']
+    if isinstance(provider_jwks, dict) and provider_jwks.get("keys"):
+        provider_jwks = provider_jwks["keys"]
     for jwk in provider_jwks:
         if jwk["kid"] == kid:
             return jwk
@@ -287,13 +264,6 @@ def get_jwk_from_jwt(jwt: str, provider_jwks: dict) -> dict:
 
 def random_token(n=254):
     return token_hex(n)
-
-from plone.app.event.base import FALLBACK_TIMEZONE
-from plone.app.event.base import replacement_zones
-from plone.event.utils import default_timezone as fallback_default_timezone
-from plone.event.utils import validated_timezone
-from zope.component import getUtility
-from plone.registry.interfaces import IRegistry
 
 
 def make_aware(value, timezone=None):
@@ -309,6 +279,7 @@ def make_aware(value, timezone=None):
     # This may be wrong around DST changes!
     return value.replace(tzinfo=timezone)
 
+
 def is_aware(value):
     """
     Determine if a given datetime.datetime is aware.
@@ -322,10 +293,6 @@ def is_aware(value):
     https://github.com/django/django/blob/main/django/utils/timezone.py
     """
     return value.utcoffset() is not None
-
-
-def datetime_from_timestamp(value) -> datetime.datetime:
-    return make_aware(datetime.datetime.fromtimestamp(value))
 
 
 def get_current_timezone():
@@ -345,101 +312,60 @@ def get_current_timezone():
     return portal_timezone
 
 
-# jwtse.py
-from cryptojwt.jwk.jwk import key_from_jwk_dict
-from cryptojwt.jws.jws import JWS
-from cryptojwt.exception import UnsupportedAlgorithm, VerificationError
+def get_pkce(code_challenge_method: str = "S256", code_challenge_length: int = 64):
+    hashers = {"S256": hashlib.sha256}
 
-def create_jws(payload: dict, jwk_dict: dict, alg: str = "RS256", protected:dict = {}, **kwargs) -> str:
-    _key = key_from_jwk_dict(jwk_dict)
-    _signer = JWS(payload, alg=alg, **kwargs)
+    code_verifier_length = random.randint(43, 128)  # nosec - B311
+    code_verifier = base64.urlsafe_b64encode(os.urandom(code_verifier_length)).decode(
+        "utf-8"
+    )
+    code_verifier = re.sub("[^a-zA-Z0-9]+", "", code_verifier)
 
-    signature = _signer.sign_compact([_key], protected=protected, **kwargs)
-    return signature
+    code_challenge = hashers.get(code_challenge_method)(
+        code_verifier.encode("utf-8")
+    ).digest()
+    code_challenge = base64.urlsafe_b64encode(code_challenge).decode("utf-8")
+    code_challenge = code_challenge.replace("=", "")
 
-
-def verify_jws(jws: str, pub_jwk: dict, **kwargs) -> str:
-    _key = key_from_jwk_dict(pub_jwk)
-
-    _head = unpad_jwt_head(jws)
-    if _head.get("kid") != pub_jwk["kid"]:  # pragma: no cover
-        raise Exception(
-            f"kid error: {_head.get('kid')} != {pub_jwk['kid']}"
-        )
-
-    _alg = _head["alg"]
-    if _alg not in SIGNING_ALG_VALUES_SUPPORTED or not _alg:  # pragma: no cover
-        raise UnsupportedAlgorithm(f"{_alg} has beed disabled for security reason")
-
-    verifier = JWS(alg=_head["alg"], **kwargs)
-    msg = verifier.verify_compact(jws, [_key])
-    return msg
-
-def unpad_jwt_element(jwt: str, position: int) -> dict:
-    b = jwt.split(".")[position]
-    padded = f"{b}{'=' * divmod(len(b), 4)[1]}"
-    data = json.loads(base64.urlsafe_b64decode(padded))
-    return data
+    return {
+        "code_verifier": code_verifier,
+        "code_challenge": code_challenge,
+        "code_challenge_method": code_challenge_method,
+    }
 
 
-def unpad_jwt_head(jwt: str) -> dict:
-    return unpad_jwt_element(jwt, position=0)
+def get_http_url(urls: list, httpc_params: dict = {}) -> list:
+    responses = []
+    for i in urls:
+        res = requests.get(i, **httpc_params)  # nosec - B113
+        responses.append(res.content.decode())
+    return responses
 
 
-def unpad_jwt_payload(jwt: str) -> dict:
-    return unpad_jwt_element(jwt, position=1)
-
-from cryptojwt.jws.utils import left_hash
-
-
-def verify_at_hash(id_token, access_token) -> bool:
-    id_token_at_hash = id_token['at_hash']
-    at_hash = left_hash(access_token, "HS256")
-    if at_hash != id_token_at_hash:
-        raise Exception(
-            f"at_hash error: {at_hash} != {id_token_at_hash}"
-        )
-    return True
-
-import binascii
-DEFAULT_JWS_ALG = "RS256"
-DEFAULT_JWE_ALG = "RSA-OAEP"
-DEFAULT_JWE_ENC = "A256CBC-HS512"
-ENCRYPTION_ALG_VALUES_SUPPORTED = [
-        "RSA-OAEP",
-        "RSA-OAEP-256",
-        "ECDH-ES",
-        "ECDH-ES+A128KW",
-        "ECDH-ES+A192KW",
-        "ECDH-ES+A256KW",
-    ]
-from cryptojwt.jwe.jwe import factory
-
-def decrypt_jwe(jwe: str, jwk_dict: dict) -> dict:
-    # get header
-    try:
-        jwe_header = unpad_jwt_head(jwe)
-    except (binascii.Error, Exception) as e:  # pragma: no cover
-        logger.error(f"Failed to extract JWT header: {e}")
-        raise VerificationError("The JWT is not valid")
-
-    _alg = jwe_header.get("alg", DEFAULT_JWE_ALG)
-    _enc = jwe_header.get("enc", DEFAULT_JWE_ENC)
-    jwe_header.get("kid")
-
-    if _alg not in ENCRYPTION_ALG_VALUES_SUPPORTED:  # pragma: no cover
-        raise UnsupportedAlgorithm(f"{_alg} has beed disabled for security reason")
-
-    _decryptor = factory(jwe, alg=_alg, enc=_enc)
-
-    # _dkey = RSAKey(priv_key=PRIV_KEY)
-    _dkey = key_from_jwk_dict(jwk_dict)
-    msg = _decryptor.decrypt(jwe, [_dkey])
-
-    try:
-        msg_dict = json.loads(msg)
-        logger.debug(f"Decrypted JWT as: {json.dumps(msg_dict, indent=2)}")
-    except json.decoder.JSONDecodeError:
-        msg_dict = msg
-        logger.debug(f"Decrypted JWT as: {msg_dict}")
-    return msg_dict
+def get_jwks(metadata: dict, federation_jwks: list = []) -> dict:
+    """
+    get jwks or jwks_uri or signed_jwks_uri
+    """
+    jwks_list = []
+    if metadata.get("jwks"):
+        jwks_list = metadata["jwks"]["keys"]
+    elif metadata.get("jwks_uri"):
+        try:
+            jwks_uri = metadata["jwks_uri"]
+            jwks_list = get_http_url(
+                [jwks_uri],
+                httpc_params={"verify": True, "timeout": 4},
+            )
+            jwks_list = json.loads(jwks_list[0])
+        except Exception as e:
+            logger.error(f"Failed to download jwks from {jwks_uri}: {e}")
+    elif metadata.get("signed_jwks_uri"):
+        try:
+            signed_jwks_uri = metadata["signed_jwks_uri"]
+            jwks_list = get_http_url(
+                [signed_jwks_uri],
+                httpc_params={"verify": True, "timeout": 4},
+            )[0]
+        except Exception as e:
+            logger.error(f"Failed to download jwks from {signed_jwks_uri}: {e}")
+    return jwks_list

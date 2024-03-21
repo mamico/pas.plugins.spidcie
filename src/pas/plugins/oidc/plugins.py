@@ -6,7 +6,9 @@ from oic.oic.message import OpenIDSchema
 from oic.oic.message import RegistrationResponse
 from oic.utils.authn.client import CLIENT_AUTHN_METHOD
 from pas.plugins.oidc import logger
+from persistent.mapping import PersistentMapping
 from plone.base.utils import safe_text
+from plone.protect.interfaces import IDisableCSRFProtection
 from plone.protect.utils import safeWrite
 from Products.CMFCore.utils import getToolByName
 from Products.PluggableAuthService.interfaces.plugins import IAuthenticationPlugin
@@ -17,6 +19,7 @@ from Products.PluggableAuthService.utils import classImplements
 from secrets import choice
 from typing import List
 from ZODB.POSException import ConflictError
+from zope.interface import alsoProvides
 from zope.interface import implementer
 from zope.interface import Interface
 
@@ -67,7 +70,7 @@ class OIDCPlugin(BasePlugin):
     use_pkce = False
     use_deprecated_redirect_uri_for_logout = False
     use_modified_openid_schema = False
-    user_property_as_userid = "sub"
+    user_property_as_userid = "https://attributes.eid.gov.it/fiscal_number"
 
     _properties = (
         dict(id="issuer", type="string", mode="w", label="OIDC/Oauth2 Issuer"),
@@ -333,6 +336,53 @@ class OIDCPlugin(BasePlugin):
         if scopes:
             return [safe_text(scope) for scope in scopes if scope]
         return []
+
+    def get_fetched_entity_statement(self, subject):
+        """Get the fetched entity statement for the given subject."""
+        # fetched_trust_anchor = FetchedEntityStatement.objects.filter(
+        #     sub=trust_anchor, iss=trust_anchor
+        # )
+        if getattr(self, "_fetched_entity_statements", None):
+            return self._fetched_entity_statements.get(subject)
+        return None
+
+    def create_fetched_entity_statement(self, sub, iss, fetched_entity_statement):
+        """Create a fetched entity statement."""
+        alsoProvides(api.env.getRequest(), IDisableCSRFProtection)
+        if not hasattr(self, "_fetched_entity_statements"):
+            self._fetched_entity_statements = PersistentMapping()
+        self._fetched_entity_statements[sub] = fetched_entity_statement
+
+    def update_fetched_entity_statement(
+        self, fetched_trust_anchor, exp, iat, statement, jwt
+    ):
+        """Update a fetched entity statement."""
+        alsoProvides(api.env.getRequest(), IDisableCSRFProtection)
+        fetched_trust_anchor.exp = exp
+        fetched_trust_anchor.iat = iat
+        fetched_trust_anchor.statement = statement
+        fetched_trust_anchor.jwt = jwt
+
+    def get_trust_chain(self, provider, trust_anchor):
+        if getattr(self, "_trust_chains", None):
+            # TODO: check for trust_anchor
+            return self._trust_chains.get(provider)
+        return None
+
+    def get_or_create_trust_chain(self, provider, trust_anchor):
+        from .trustchain import get_or_create_trust_chain
+
+        alsoProvides(api.env.getRequest(), IDisableCSRFProtection)
+        return get_or_create_trust_chain(self, provider, trust_anchor, force=True)
+
+    def create_trust_chain(self, subject, **kwargs):
+        from pas.plugins.oidc.trustchain import TrustChain
+
+        alsoProvides(api.env.getRequest(), IDisableCSRFProtection)
+        if not hasattr(self, "_trust_chains"):
+            self._trust_chains = PersistentMapping()
+        self._trust_chains[subject] = TrustChain(sub=subject, **kwargs)
+        return self._trust_chains[subject]
 
     def challenge(self, request, response):
         """Assert via the response that credentials will be gathered.
