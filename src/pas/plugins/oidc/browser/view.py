@@ -35,7 +35,6 @@ import uuid
 # from zExceptions import Unauthorized
 
 
-
 class RequireLoginView(BrowserView):
     """Our version of the require-login view from Plone.
 
@@ -85,19 +84,23 @@ class LoginView(OidcRPView):
                     "error": "request rejected",
                     "error_description": "Trust Chain is unavailable.",
                 }
+                self.request.response.setStatus(400)
                 return self.error_page(**context)
         except InvalidTrustchain as exc:
             context = {
                 "error": "request rejected",
                 "error_description": str(exc.args),
             }
-            raise NotFound(context)
+            self.request.response.setStatus(400)
+            return self.error_page(**context)
         except Exception as exc:
             context = {
                 "error": "request rejected",
                 "error_description": _(str(exc.args)),
             }
-            raise NotFound(context)
+            logger.exception("request_rejected")
+            self.request.response.setStatus(500)
+            return self.error_page(**context)
 
         provider_metadata = tc.metadata.get("openid_provider", None)
         if not provider_metadata:
@@ -105,7 +108,8 @@ class LoginView(OidcRPView):
                 "error": "request rejected",
                 "error_description": _("provider metadata not found"),
             }
-            raise NotFound(context)
+            self.request.response.setStatus(400)
+            return self.error_page(**context)
 
         # TODO
         entity_conf = FEDERATION_CONFIGURATIONS[0]
@@ -119,7 +123,8 @@ class LoginView(OidcRPView):
                 "error": "request rejected",
                 "error_description": _("Missing configuration."),
             }
-            raise NotFound(context)
+            self.request.response.setStatus(400)
+            return self.error_page(**context)
         client_conf = entity_conf["metadata"]["openid_relying_party"]
         if not (
             provider_metadata.get("jwks_uri", None)
@@ -129,7 +134,8 @@ class LoginView(OidcRPView):
                 "error": "request rejected",
                 "error_description": _("Invalid provider Metadata."),
             }
-            raise NotFound(context)
+            self.request.response.setStatus(400)
+            return self.error_page(**context)
 
         # TODO
         # jwks_dict = get_jwks(provider_metadata, federation_jwks=tc.jwks)

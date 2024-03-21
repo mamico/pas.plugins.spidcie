@@ -337,6 +337,12 @@ class OIDCPlugin(BasePlugin):
             return [safe_text(scope) for scope in scopes if scope]
         return []
 
+    def clear_trust_chains(self):
+        if getattr(self, "_trust_chains", None):
+            self._trust_chains.clear()
+        if getattr(self, "_fetched_entity_statements", None):
+            self._fetched_entity_statements.clear()
+
     def get_fetched_entity_statement(self, subject):
         """Get the fetched entity statement for the given subject."""
         # fetched_trust_anchor = FetchedEntityStatement.objects.filter(
@@ -375,14 +381,11 @@ class OIDCPlugin(BasePlugin):
         alsoProvides(api.env.getRequest(), IDisableCSRFProtection)
         return get_or_create_trust_chain(self, provider, trust_anchor, force=True)
 
-    def create_trust_chain(self, subject, **kwargs):
-        from pas.plugins.oidc.trustchain import TrustChain
-
+    def set_trust_chain(self, subject, tc):
         alsoProvides(api.env.getRequest(), IDisableCSRFProtection)
         if not hasattr(self, "_trust_chains"):
             self._trust_chains = PersistentMapping()
-        self._trust_chains[subject] = TrustChain(sub=subject, **kwargs)
-        return self._trust_chains[subject]
+        self._trust_chains[subject] = tc
 
     def challenge(self, request, response):
         """Assert via the response that credentials will be gathered.

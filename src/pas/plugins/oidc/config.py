@@ -69,6 +69,7 @@ OIDCFED_ACR_PROFILES = [
     "https://www.spid.gov.it/SpidL3",
 ]
 
+# settings here
 FEDERATION_CONFIGURATIONS = [
     {
         "created": "2022-02-06T17:25:43.158Z",

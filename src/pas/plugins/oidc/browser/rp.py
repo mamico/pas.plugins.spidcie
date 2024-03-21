@@ -1,3 +1,4 @@
+from ..config import FEDERATION_CONFIGURATIONS
 from ..config import OIDCFED_DEFAULT_TRUST_ANCHOR
 from ..config import OIDCFED_IDENTITY_PROVIDERS
 from ..config import OIDCFED_TRUST_ANCHORS
@@ -16,6 +17,7 @@ from ..utils import iat_now
 from pas.plugins.oidc import logger
 from Products.Five.browser import BrowserView
 from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
+from zExceptions import NotFound
 
 import json
 import requests
@@ -33,7 +35,7 @@ class OidcRPView(BrowserView):
         return self.context
 
     def validate_json_schema(self, payload, schema_type, error_description):
-        # TODO:
+        # TODO: json validation ?
         return True
         # try:
         #     schema = OIDCFED_PROVIDER_PROFILES[OIDCFED_DEFAULT_PROVIDER_PROFILE]
@@ -81,14 +83,12 @@ class OidcRPView(BrowserView):
 
         discover_trust = False
 
-        # TODO
         if not tc:
             logger.info(f"Trust Chain not found for {provider}")
             discover_trust = True
         elif not tc.is_active:
             logger.warning(f"{tc} found but DISABLED at {tc.modified}")
             raise InvalidTrustchain(f"{tc} found but DISABLED at {tc.modified}")
-        # TODO
         elif tc.is_expired:
             logger.warning(f"{tc} found but expired at {tc.exp}")
             logger.warning("Try to renew the trust chain")
@@ -238,3 +238,83 @@ class OidcUserInfo(object):
             except Exception as e:  # pragma: no cover
                 logger.error(f"Userinfo response unknown error {state}: {e}")
                 return False
+
+
+class ResolveView(BrowserView):
+    """
+    resolves the final metadata of its descendants
+
+    In this implementation we only returns a preexisting
+    Metadata if it's valid
+    we avoid any possibility to trigger a new Metadata discovery if
+
+    ...resolve?sub=http://cie-provider.org:8002/oidc/op&anchor=...
+    """
+
+    @property
+    def pas(self):
+        # TODO: se si sposta la vista va cercato/calcolato il PAS
+        return self.context
+
+    def __call__(self, format="jose"):
+        # def resolve_entity_statement(request, format: str = "jose"):
+        # @schema(
+        #     methods=['GET'],
+        #     get_request_schema = {
+        #         "application/x-www-form-urlencoded": ResolveRequest
+        #     },
+        #     get_response_schema = {
+        #             "400": ResolveErrorResponse,
+        #             "404": ResolveErrorResponse,
+        #             "200": ResolveResponse
+        #     },
+        #     tags = ['Federation API']
+        # )
+        if not all((self.request.get("sub", None), self.request.get("anchor", None))):
+            raise NotFound("sub and anchor parameters are REQUIRED.")
+        # iss = FederationEntityConfiguration.objects.filter(is_active=True).first()
+        iss = FEDERATION_CONFIGURATIONS[0]
+        sub = self.request.get("sub")
+        entity = self.pas.get_trust_chain(sub, self.request.get("anchor"))
+
+        # only with privileged actors with staff token can triggers a new trust chain
+        # staff_token_head = request.headers.get("Authorization", None)
+        # if staff_token_head:
+        #     staff_token = StaffToken.objects.filter(
+        #         token = staff_token_head
+        #     ).first()
+        #     if staff_token.is_valid:
+        #         try:
+        #             # a staff token get a fresh trust chain on each call
+        #             entity = get_or_create_trust_chain(
+        #                 httpc_params=HTTPC_PARAMS,
+        #                 required_trust_marks = getattr(
+        #                     settings, "OIDCFED_REQUIRED_TRUST_MARKS", []
+        #                 ),
+        #                 subject=_q["sub"],
+        #                 trust_anchor=_q["trust_anchor__sub"],
+        #                 force = True
+        #             )
+        #         except Exception as e:
+        #             logger.error(
+        #                 f"Failed privileged Trust Chain creation for {_q['sub']}: {e}"
+        #             )
+
+        if not entity or not entity.is_active:
+            raise NotFound("entity not found.")
+        res = {
+            "iss": iss["sub"],
+            "sub": sub,
+            # "aud": [],
+            "iat": entity.iat_as_timestamp,
+            "exp": entity.exp_as_timestamp,
+            "trust_marks": entity.trust_marks,
+            "metadata": entity.metadata,
+            "trust_chain": entity.chain,
+        }
+        if self.request.get("format") == "json" or format == "json":
+            self.request.response.setHeader("Content-Type", "application/json")
+            return json.dumps(res)
+        else:
+            self.request.response.setHeader("Content-Type", "application/jose")
+            return create_jws(res, iss["jwks_fed"][0])

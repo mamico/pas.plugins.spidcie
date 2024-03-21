@@ -46,4 +46,13 @@
       layer="pas.plugins.oidc.interfaces.IPasPluginsOidcLayer"
       />
 
+  <!-- TODO: spostare sulla root del sito -->
+  <browser:page
+      name="resolve"
+      for="pas.plugins.oidc.plugins.IOIDCPlugin"
+      class=".rp.ResolveView"
+      permission="zope2.View"
+      layer="pas.plugins.oidc.interfaces.IPasPluginsOidcLayer"
+      />
+
 </configure>
