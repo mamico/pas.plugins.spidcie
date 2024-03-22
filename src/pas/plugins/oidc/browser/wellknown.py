@@ -50,19 +50,19 @@ class EntityConfiguration(BrowserView):
                 "keys": self.pas.get_public_jwks(),
             },
             "metadata": {
-                # "federation_entity": {
-                #     "federation_resolve_endpoint": f"{sub}/resolve",
-                #     "organization_name": self.pas.organization_name,
-                #     "homepage_uri": portal_url,
-                #     # "policy_uri": f"{portal_url}/legal-information",
-                #     # "logo_uri": "http://trust-anchor.org:8000/static/svg/spid-logo-c-lb.svg",
-                #     "contacts": [self.pas.contact],
-                # },
+                "federation_entity": {
+                    "federation_resolve_endpoint": f"{sub}/resolve",
+                    "organization_name": self.pas.organization_name,
+                    "homepage_uri": portal_url,
+                    "policy_uri": f"{portal_url}/legal-information",
+                    "logo_uri": f"{portal_url}/spid-logo-c-lb.svg",
+                    "contacts": [self.pas.contact],
+                },
                 "openid_relying_party": {
                     "application_type": "web",
-                    "organization_name": self.pas.organization_name,
                     "client_id": sub,
                     "client_registration_types": ["automatic"],
+                    # "organization_name": self.pas.organization_name,
                     # "jwks_uri": "http://relying-party.org:8001/oidc/rp/openid_relying_party/jwks.json",
                     # "signed_jwks_uri": "http://relying-party.org:8001/oidc/rp/openid_relying_party/jwks.jose",
                     "jwks": {
