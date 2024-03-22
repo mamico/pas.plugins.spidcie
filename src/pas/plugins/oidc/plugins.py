@@ -1,3 +1,5 @@
+from . import logger
+from .jwks import public_jwk_from_private_jwk
 from AccessControl import ClassSecurityInfo
 from AccessControl.class_init import InitializeClass
 from contextlib import contextmanager
@@ -5,7 +7,6 @@ from oic.oic import Client
 from oic.oic.message import OpenIDSchema
 from oic.oic.message import RegistrationResponse
 from oic.utils.authn.client import CLIENT_AUTHN_METHOD
-from pas.plugins.oidc import logger
 from persistent.mapping import PersistentMapping
 from plone.base.utils import safe_text
 from plone.protect.interfaces import IDisableCSRFProtection
@@ -56,6 +57,10 @@ class OIDCPlugin(BasePlugin):
     meta_type = "OIDC Plugin"
     security = ClassSecurityInfo()
 
+    organization_name = ""
+    contact = ""
+    jwks = ""
+
     issuer = ""
     client_id = ""
     client_secret = ""  # nosec B105
@@ -73,6 +78,13 @@ class OIDCPlugin(BasePlugin):
     user_property_as_userid = "https://attributes.eid.gov.it/fiscal_number"
 
     _properties = (
+        # --- oidc / federation /spid /cie
+        dict(
+            id="organization_name", type="string", mode="w", label="Organization name"
+        ),
+        dict(id="contact", type="string", mode="w", label="Contact"),
+        dict(id="jwks", type="string", mode="w", label="JWKS"),
+        # --- oidc
         dict(id="issuer", type="string", mode="w", label="OIDC/Oauth2 Issuer"),
         dict(id="client_id", type="string", mode="w", label="Client ID"),
         dict(id="client_secret", type="string", mode="w", label="Client secret"),
@@ -336,6 +348,10 @@ class OIDCPlugin(BasePlugin):
         if scopes:
             return [safe_text(scope) for scope in scopes if scope]
         return []
+
+    # --- OIDC/FED SPID -CIE
+    def get_public_jwks(self):
+        return public_jwk_from_private_jwk(self.getProperty("jwks"))
 
     def clear_trust_chains(self):
         if getattr(self, "_trust_chains", None):

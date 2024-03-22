@@ -76,7 +76,7 @@ class LoginView(OidcRPView):
             http://localhost:8080/Plone/acl_users/oidc/login?provider=http://trust-anchor.org:8000/oidc/op&profile=spid
             http://localhost:8080/Plone/acl_users/oidc/login?provider=http://cie-provider.org:8002/oidc/op&profile=cie
         """
-        ## if oidc federation is enabled, we need to check the trust chain
+        # if oidc federation is enabled, we need to check the trust chain
         try:
             tc = self.get_oidc_op()
             if not tc:
