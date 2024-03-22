@@ -33,7 +33,7 @@ class EntityConfiguration(BrowserView):
         return self
 
     def openid_federation(self):
-        autority_hints = ["https://oidc.registry.servizicie.interno.gov.it"]
+        autority_hints = ["https://oidc.registry.servizicie.interno.gov.it", "https://registry.spid.gov.it"]
         # autority_hints = ["http://trust-anchor.org:8000"]
         iat = iat_now()
         # exp = iat + 3600
@@ -78,7 +78,7 @@ class EntityConfiguration(BrowserView):
                     "userinfo_signed_response_alg": "RS256",
                     "userinfo_encrypted_response_alg": "RSA-OAEP",
                     "userinfo_encrypted_response_enc": "A128CBC-HS256",
-                    # "token_endpoint_auth_method": "private_key_jwt",
+                    "token_endpoint_auth_method": "private_key_jwt",
                 },
             },
             "trust_marks": [
