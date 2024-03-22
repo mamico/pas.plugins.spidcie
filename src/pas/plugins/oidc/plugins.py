@@ -351,7 +351,9 @@ class OIDCPlugin(BasePlugin):
 
     # --- OIDC/FED SPID -CIE
     def get_public_jwks(self):
-        return public_jwk_from_private_jwk(self.getProperty("jwks"))
+        return [
+            public_jwk_from_private_jwk(self.getProperty("jwks")),
+        ]
 
     def clear_trust_chains(self):
         if getattr(self, "_trust_chains", None):
