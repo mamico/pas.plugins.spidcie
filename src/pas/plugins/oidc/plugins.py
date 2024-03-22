@@ -25,6 +25,7 @@ from zope.interface import implementer
 from zope.interface import Interface
 
 import itertools
+import json
 import plone.api as api
 import string
 
@@ -350,8 +351,11 @@ class OIDCPlugin(BasePlugin):
         return []
 
     # --- OIDC/FED SPID -CIE
+    def get_private_jwks(self):
+        return json.loads(self.getProperty("jwks"))
+
     def get_public_jwks(self):
-        return public_jwk_from_private_jwk(self.getProperty("jwks"))
+        return public_jwk_from_private_jwk(self.get_private_jwks())
 
     def clear_trust_chains(self):
         if getattr(self, "_trust_chains", None):
