@@ -68,6 +68,7 @@ class EntityConfiguration(BrowserView):
                     "jwks": {
                         "keys": self.pas.get_public_jwks(),
                     },
+                    "jwks_uri": f"{sub}/.well-known/jwks.json",
                     "client_name": self.pas.organization_name,
                     "contacts": [self.pas.contact],
                     "grant_types": ["refresh_token", "authorization_code"],
@@ -107,5 +108,8 @@ class EntityConfiguration(BrowserView):
                     alg=conf["default_signature_alg"],
                     typ="entity-statement+jwt",
                 )
+        elif self.name == "jwks.json":
+            self.request.response.setHeader("Content-Type", "application/json")
+            return json.dumps(self.pas.get_public_jwks())
         else:
             raise NotFound(self.request, self.name, self.context)
