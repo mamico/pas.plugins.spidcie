@@ -355,7 +355,9 @@ class OIDCPlugin(BasePlugin):
         return json.loads(self.getProperty("jwks"))
 
     def get_public_jwks(self):
-        return public_jwk_from_private_jwk(self.get_private_jwks())
+        return [
+            public_jwk_from_private_jwk(self.get_private_jwks()),
+        ]
 
     def clear_trust_chains(self):
         if getattr(self, "_trust_chains", None):

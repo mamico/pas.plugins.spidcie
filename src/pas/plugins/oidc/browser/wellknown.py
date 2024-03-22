@@ -33,7 +33,10 @@ class EntityConfiguration(BrowserView):
         return self
 
     def openid_federation(self):
-        autority_hints = ["https://oidc.registry.servizicie.interno.gov.it", "https://registry.spid.gov.it"]
+        autority_hints = [
+            "https://oidc.registry.servizicie.interno.gov.it",
+            "https://registry.spid.gov.it",
+        ]
         # autority_hints = ["http://trust-anchor.org:8000"]
         iat = iat_now()
         # exp = iat + 3600
