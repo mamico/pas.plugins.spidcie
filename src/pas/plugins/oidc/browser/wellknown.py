@@ -113,6 +113,8 @@ class EntityConfiguration(BrowserView):
                 )
         elif self.name == "jwks.json":
             self.request.response.setHeader("Content-Type", "application/json")
-            return json.dumps(self.pas.get_public_jwks())
+            return json.dumps({
+                "keys": self.pas.get_public_jwks(),
+            })
         else:
             raise NotFound(self.request, self.name, self.context)
