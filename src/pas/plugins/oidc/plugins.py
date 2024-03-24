@@ -78,11 +78,13 @@ class OIDCPlugin(BasePlugin):
     use_deprecated_redirect_uri_for_logout = False
     use_modified_openid_schema = False
     user_property_as_userid = "https://attributes.eid.gov.it/fiscal_number"
-    autority_hints = [
-        "http://trust-anchor.org:8000",
-        # "https://oidc.registry.servizicie.interno.gov.it",
-        # "https://registry.spid.gov.it",
-    ]
+
+    # TODO: move to settings ?
+    autority_hints = (
+        # "http://trust-anchor.org:8000",
+        "https://oidc.registry.servizicie.interno.gov.it",
+        "https://registry.spid.gov.it",
+    )
     response_types = [
         "code",
     ]
@@ -104,6 +106,12 @@ class OIDCPlugin(BasePlugin):
             type="text",
             mode="w",
             label="a list of private keys for Core ops (json)",
+        ),
+        dict(
+            id="autority_hints",
+            type="lines",
+            mode="w",
+            label="autority_hints",
         ),
         # --- oidc
         dict(
