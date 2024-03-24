@@ -60,7 +60,8 @@ class OIDCPlugin(BasePlugin):
 
     organization_name = ""
     contact = ""
-    jwks = ""
+    jwks_fed = "[]"
+    jwks_core = "[]"
 
     issuer = ""
     client_id = ""
@@ -77,6 +78,14 @@ class OIDCPlugin(BasePlugin):
     use_deprecated_redirect_uri_for_logout = False
     use_modified_openid_schema = False
     user_property_as_userid = "https://attributes.eid.gov.it/fiscal_number"
+    autority_hints = [
+        "http://trust-anchor.org:8000",
+        # "https://oidc.registry.servizicie.interno.gov.it",
+        # "https://registry.spid.gov.it",
+    ]
+    response_types = [
+        "code",
+    ]
 
     _properties = (
         # --- oidc / federation /spid /cie
@@ -84,11 +93,26 @@ class OIDCPlugin(BasePlugin):
             id="organization_name", type="string", mode="w", label="Organization name"
         ),
         dict(id="contact", type="string", mode="w", label="Contact"),
-        dict(id="jwks", type="string", mode="w", label="JWKS"),
+        dict(
+            id="jwks_fed",
+            type="text",
+            mode="w",
+            label="a list of private keys for Federation ops (json)",
+        ),
+        dict(
+            id="jwks_core",
+            type="text",
+            mode="w",
+            label="a list of private keys for Core ops (json)",
+        ),
         # --- oidc
-        dict(id="issuer", type="string", mode="w", label="OIDC/Oauth2 Issuer"),
+        dict(
+            id="issuer", type="string", mode="w", label="OIDC/Oauth2 Issuer"
+        ),  # TODO: remove ?
         dict(id="client_id", type="string", mode="w", label="Client ID"),
-        dict(id="client_secret", type="string", mode="w", label="Client secret"),
+        dict(
+            id="client_secret", type="string", mode="w", label="Client secret"
+        ),  # TODO: remove ?
         dict(id="redirect_uris", type="lines", mode="w", label="Redirect uris"),
         dict(
             id="use_session_data_manager",
@@ -351,12 +375,22 @@ class OIDCPlugin(BasePlugin):
         return []
 
     # --- OIDC/FED SPID -CIE
-    def get_private_jwks(self):
-        return json.loads(self.getProperty("jwks"))
 
-    def get_public_jwks(self):
+    def get_subject(self):
+        return f"{api.portal.get().absolute_url()}"  # /oidc"
+
+    def get_private_jwks_fed(self):
+        return json.loads(self.getProperty("jwks_fed"))
+
+    def get_public_jwks_fed(self):
+        return [public_jwk_from_private_jwk(jwk) for jwk in self.get_private_jwks_fed()]
+
+    def get_private_jwks_core(self):
+        return json.loads(self.getProperty("jwks_core"))
+
+    def get_public_jwks_core(self):
         return [
-            public_jwk_from_private_jwk(self.get_private_jwks()),
+            public_jwk_from_private_jwk(jwk) for jwk in self.get_private_jwks_core()
         ]
 
     def clear_trust_chains(self):

@@ -1,4 +1,3 @@
-from ..config import FEDERATION_CONFIGURATIONS
 from ..config import OIDCFED_ACR_PROFILES
 from ..config import RP_REQUEST_CLAIM_BY_PROFILE
 from ..config import RP_REQUEST_EXP
@@ -111,21 +110,21 @@ class LoginView(OidcRPView):
             self.request.response.setStatus(400)
             return self.error_page(**context)
 
-        # TODO
-        entity_conf = FEDERATION_CONFIGURATIONS[0]
-        # FederationEntityConfiguration.objects.filter(
-        #     entity_type="openid_relying_party",
-        #     # TODO: RPs multitenancy?
-        #     # sub = request.build_absolute_uri()
-        # ).first()
-        if not entity_conf:
-            context = {
-                "error": "request rejected",
-                "error_description": _("Missing configuration."),
-            }
-            self.request.response.setStatus(400)
-            return self.error_page(**context)
-        client_conf = entity_conf["metadata"]["openid_relying_party"]
+        # TODO: RPs multitenancy?
+        # entity_conf = self.pas.get_federation_configuration()
+        # # FederationEntityConfiguration.objects.filter(
+        # #     entity_type="openid_relying_party",
+        # #     # TODO: RPs multitenancy?
+        # #     # sub = request.build_absolute_uri()
+        # # ).first()
+        # if not entity_conf:
+        #     context = {
+        #         "error": "request rejected",
+        #         "error_description": _("Missing configuration."),
+        #     }
+        #     self.request.response.setStatus(400)
+        #     return self.error_page(**context)
+        # client_conf = entity_conf["metadata"]["openid_relying_party"]
         if not (
             provider_metadata.get("jwks_uri", None)
             or provider_metadata.get("jwks", None)
@@ -142,23 +141,23 @@ class LoginView(OidcRPView):
 
         authz_endpoint = provider_metadata["authorization_endpoint"]
         # TODO: use format_redirect_uri (?)
-        redirect_uri = self.request.get("redirect_uri", client_conf["redirect_uris"][0])
-        if redirect_uri not in client_conf["redirect_uris"]:
+        redirect_uri = self.request.get("redirect_uri", self.pas.redirect_uris[0])
+        if redirect_uri not in self.pas.redirect_uris:
             logger.warning(
                 f"Requested for unknown redirect uri {redirect_uri}. "
-                f"Reverted to default {client_conf['redirect_uris'][0]}."
+                f"Reverted to default {self.pas.redirect_uris[0]}."
             )
-            redirect_uri = client_conf["redirect_uris"][0]
+            redirect_uri = self.pas.redirect_uris[0]
         _profile = self.request.get("profile", "spid")
         _timestamp_now = int(datetime.now().timestamp())
         authz_data = dict(
-            iss=client_conf["client_id"],
+            iss=self.pas.get_subject(),
             scope=self.request.get("scope", None) or "openid",
             redirect_uri=redirect_uri,
-            response_type=client_conf["response_types"][0],
+            response_type=self.pas.response_types[0],
             nonce=rndstr(32),
             state=rndstr(32),
-            client_id=client_conf["client_id"],
+            client_id=self.pas.get_subject(),
             endpoint=authz_endpoint,
             acr_values=OIDCFED_ACR_PROFILES,
             iat=_timestamp_now,
@@ -183,7 +182,7 @@ class LoginView(OidcRPView):
         authz_data.update(pkce_values)
         #
         authz_entry = dict(
-            client_id=client_conf["client_id"],
+            client_id=self.pas.get_subject(),
             state=authz_data["state"],
             endpoint=authz_endpoint,
             # TODO: better have here an organization name
@@ -245,13 +244,13 @@ class LoginView(OidcRPView):
         authz_data.pop("code_verifier")
         # add the signed request object
         authz_data_obj = deepcopy(authz_data)
-        authz_data_obj["iss"] = client_conf["client_id"]
+        authz_data_obj["iss"] = self.pas.get_subject()
 
         # sub claim MUST not be used to prevent that this jwt
         # could be reused as a private_key_jwt
         # authz_data_obj["sub"] = client_conf["client_id"]
 
-        request_obj = create_jws(authz_data_obj, entity_conf["jwks_core"][0])
+        request_obj = create_jws(authz_data_obj, self.pas.get_private_jwks_core()[0])
         authz_data["request"] = request_obj
         uri_path = urlencode(
             {
@@ -458,8 +457,8 @@ class CallbackView(OidcRPView, OAuth2AuthorizationCodeGrant, OidcUserInfo):
 
         # TODO: cercare la configurazione del client in base al client_id dell'authz
         # XXX: questo anzichè nella call andrebbe nella init ? della vista o del plugin ?
-        self.rp_conf = FEDERATION_CONFIGURATIONS[0]  # authz["client_id"]
-
+        # self.rp_conf = authz["client_id"]
+        # self.rp_conf = self.pas.get_federation_configuration()
         # self.rp_conf = FederationEntityConfiguration.objects.filter(
         #     sub=authz_token.authz_request.client_id
         # ).first()
@@ -477,7 +476,7 @@ class CallbackView(OidcRPView, OAuth2AuthorizationCodeGrant, OidcUserInfo):
             state=authz.get("state"),
             code=code,
             issuer_id=authz.get("provider_id"),
-            client_conf=self.rp_conf,
+            # client_conf=self.rp_conf,
             token_endpoint_url=authz.get("provider_configuration")["token_endpoint"],
             audience=[authz.get("provider_id")],
             code_verifier=authz_data.get("code_verifier"),
@@ -587,7 +586,7 @@ class CallbackView(OidcRPView, OAuth2AuthorizationCodeGrant, OidcUserInfo):
         if not user_info:
             logger.warning(
                 "Userinfo request failed for state: "
-                f"{authz.state} to {authz.provider_id}"
+                f"{authz['state']} to {authz['provider_id']}"
             )
             context = {
                 "error": "invalid userinfo response",

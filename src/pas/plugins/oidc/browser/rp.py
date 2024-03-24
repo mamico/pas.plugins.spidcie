@@ -1,4 +1,3 @@
-from ..config import FEDERATION_CONFIGURATIONS
 from ..config import OIDCFED_DEFAULT_TRUST_ANCHOR
 from ..config import OIDCFED_IDENTITY_PROVIDERS
 from ..config import OIDCFED_TRUST_ANCHORS
@@ -117,7 +116,7 @@ class OAuth2AuthorizationCodeGrant:
         state: str,
         code: str,
         issuer_id: str,
-        client_conf,  # : FederationEntityConfiguration,
+        # client_conf,  # : FederationEntityConfiguration,
         token_endpoint_url: str,
         audience: list,
         code_verifier: str = None,
@@ -126,7 +125,7 @@ class OAuth2AuthorizationCodeGrant:
         Access Token Request
         https://tools.ietf.org/html/rfc6749#section-4.1.3
         """
-        client_id = client_conf["sub"]
+        client_id = self.pas.get_subject()
         grant_data = dict(
             grant_type="authorization_code",
             redirect_uri=redirect_uri,
@@ -145,7 +144,7 @@ class OAuth2AuthorizationCodeGrant:
                     "exp": exp_from_now(),
                     "jti": str(uuid.uuid4()),
                 },
-                jwk_dict=client_conf["jwks_core"][0],
+                jwk_dict=self.pas.get_private_jwks_core()[0],
             ),
         )
 
@@ -215,7 +214,7 @@ class OidcUserInfo(object):
                 header = unpad_jwt_head(jwe)
                 # header["kid"] kid di rp
 
-                rp_jwk = self.get_jwk(header["kid"], self.rp_conf["jwks_core"])
+                rp_jwk = self.get_jwk(header["kid"], self.pas.get_private_jwks_core())
                 jws = decrypt_jwe(jwe, rp_jwk)
 
                 if isinstance(jws, bytes):
@@ -273,7 +272,7 @@ class ResolveView(BrowserView):
         if not all((self.request.get("sub", None), self.request.get("anchor", None))):
             raise NotFound("sub and anchor parameters are REQUIRED.")
         # iss = FederationEntityConfiguration.objects.filter(is_active=True).first()
-        iss = FEDERATION_CONFIGURATIONS[0]
+        # iss = self.pas.get_federation_configuration()
         sub = self.request.get("sub")
         entity = self.pas.get_trust_chain(sub, self.request.get("anchor"))
 
@@ -303,7 +302,7 @@ class ResolveView(BrowserView):
         if not entity or not entity.is_active:
             raise NotFound("entity not found.")
         res = {
-            "iss": iss["sub"],
+            "iss": self.pas.get_subject(),
             "sub": sub,
             # "aud": [],
             "iat": entity.iat_as_timestamp,
@@ -317,4 +316,4 @@ class ResolveView(BrowserView):
             return json.dumps(res)
         else:
             self.request.response.setHeader("Content-Type", "application/jose")
-            return create_jws(res, iss["jwks_fed"][0])
+            return create_jws(res, self.pas.get_private_jwks_fed()[0])
