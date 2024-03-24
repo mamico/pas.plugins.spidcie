@@ -385,7 +385,8 @@ class OIDCPlugin(BasePlugin):
     # --- OIDC/FED SPID -CIE
 
     def get_subject(self):
-        return f"{api.portal.get().absolute_url()}"  # /oidc"
+        return self.client_id
+        # return f"{api.portal.get().absolute_url()}"  # /oidc"
 
     def get_private_jwks_fed(self):
         return json.loads(self.getProperty("jwks_fed"))
