@@ -39,8 +39,6 @@ class EntityConfiguration(BrowserView):
         exp = iat + 172800
         portal_url = api.portal.get().absolute_url()
         sub = self.pas.get_subject()
-        public_jwks_core = self.pas.get_public_jwks_core()
-        public_jwks_core[0]["use"] = "sig"
         # https://auth.toscana.it/auth/realms/enti/federation-entity/udcvb/.well-known/openid-federation
         return {
             "exp": exp,
@@ -65,7 +63,7 @@ class EntityConfiguration(BrowserView):
                     "client_registration_types": ["automatic"],
                     # "organization_name": self.pas.organization_name,
                     "jwks": {
-                        "keys": public_jwks_core,
+                        "keys": self.pas.get_public_jwks_core(),
                     },
                     "jwks_uri": f"{sub}/.well-known/jwks.json",
                     # "signed_jwks_uri": "http://relying-party.org:8001/oidc/rp/openid_relying_party/jwks.jose",
