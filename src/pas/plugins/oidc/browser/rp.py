@@ -1,6 +1,6 @@
 from ..config import OIDCFED_DEFAULT_TRUST_ANCHOR
 from ..config import OIDCFED_IDENTITY_PROVIDERS
-from ..config import OIDCFED_TRUST_ANCHORS
+# from ..config import OIDCFED_TRUST_ANCHORS
 from ..exceptions import InvalidTrustchain
 from ..exceptions import UnknownKid
 from ..jwtse import create_jws
@@ -60,10 +60,11 @@ class OidcRPView(BrowserView):
                 "Missing provider url. Please try '?provider=https://provider-subject/'"
             )
 
-        trust_anchor = request.get("trust_anchor", None)
-        if trust_anchor is not None and trust_anchor not in OIDCFED_TRUST_ANCHORS:
-            logger.warning("Unallowed Trust Anchor %s", trust_anchor)
-            raise InvalidTrustchain("Unallowed Trust Anchor")
+        # trust_anchor = request.get("trust_anchor", None)
+        # if trust_anchor is not None and trust_anchor not in OIDCFED_TRUST_ANCHORS:
+        #     logger.warning("Unallowed Trust Anchor %s", trust_anchor)
+        #     raise InvalidTrustchain("Unallowed Trust Anchor")
+        trust_anchor = None
 
         if not trust_anchor:
             for profile, value in OIDCFED_IDENTITY_PROVIDERS.items():
