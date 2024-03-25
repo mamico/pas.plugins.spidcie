@@ -2,14 +2,18 @@
 # TODO: move to settings
 
 # required for onboarding checks and also for all the leafs
-OIDCFED_DEFAULT_TRUST_ANCHOR = "http://trust-anchor.org:8000"
+# OIDCFED_DEFAULT_TRUST_ANCHOR = "http://trust-anchor.org:8000"
+
+# TODO: questo dovrebbe dinamico usando il trust anchor
+# https://docs.italia.it/italia/spid/spid-cie-oidc-docs/it/versione-corrente/trust_negotiation.html#relying-party
 
 OIDCFED_IDENTITY_PROVIDERS = {
     #   "spid": {
     #     "http://127.0.0.1:8000/oidc/op" : OIDCFED_DEFAULT_TRUST_ANCHOR,
     #   },
     "cie": {
-        "http://cie-provider.org:8002/oidc/op": OIDCFED_DEFAULT_TRUST_ANCHOR,
+        # "http://cie-provider.org:8002/oidc/op": "http://trust-anchor.org:8000",
+        "https://preproduzione.oidc.idserver.servizicie.interno.gov.it": "https://preproduzione.oidc.idserver.servizicie.interno.gov.it",
     }
 }
 # ---------------------------------------------------------------
