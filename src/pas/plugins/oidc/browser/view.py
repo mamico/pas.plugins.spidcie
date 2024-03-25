@@ -22,13 +22,12 @@ from pas.plugins.oidc import utils
 from pas.plugins.oidc.plugins import OAuth2ConnectionException
 from pas.plugins.oidc.session import Session
 from plone import api
+from plone.protect.interfaces import IDisableCSRFProtection
 from Products.Five.browser import BrowserView
 from urllib.parse import quote
 from urllib.parse import urlencode
 from zExceptions import NotFound
-from plone.protect.interfaces import IDisableCSRFProtection
 from zope.interface import alsoProvides
-
 
 import json
 import uuid
