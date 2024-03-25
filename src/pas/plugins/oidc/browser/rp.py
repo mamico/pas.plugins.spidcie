@@ -1,4 +1,4 @@
-from ..config import OIDCFED_DEFAULT_TRUST_ANCHOR
+# from ..config import OIDCFED_DEFAULT_TRUST_ANCHOR
 from ..config import OIDCFED_IDENTITY_PROVIDERS
 # from ..config import OIDCFED_TRUST_ANCHORS
 from ..exceptions import InvalidTrustchain
@@ -72,8 +72,8 @@ class OidcRPView(BrowserView):
                     trust_anchor = value[provider]
                     break
 
-        if not trust_anchor:
-            trust_anchor = OIDCFED_DEFAULT_TRUST_ANCHOR
+        # if not trust_anchor:
+        #     trust_anchor = OIDCFED_DEFAULT_TRUST_ANCHOR
 
         tc = self.pas.get_trust_chain(provider, trust_anchor)
         # tc = TrustChain.objects.filter(
