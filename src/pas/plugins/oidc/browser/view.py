@@ -26,6 +26,9 @@ from Products.Five.browser import BrowserView
 from urllib.parse import quote
 from urllib.parse import urlencode
 from zExceptions import NotFound
+from plone.protect.interfaces import IDisableCSRFProtection
+from zope.interface import alsoProvides
+
 
 import json
 import uuid
@@ -75,6 +78,7 @@ class LoginView(OidcRPView):
             http://localhost:8080/Plone/acl_users/oidc/login?provider=http://trust-anchor.org:8000/oidc/op&profile=spid
             http://localhost:8080/Plone/acl_users/oidc/login?provider=http://cie-provider.org:8002/oidc/op&profile=cie
         """
+        alsoProvides(self.request, IDisableCSRFProtection)
         # if oidc federation is enabled, we need to check the trust chain
         try:
             tc = self.get_oidc_op()
