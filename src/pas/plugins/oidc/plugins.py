@@ -1,4 +1,5 @@
 from . import logger
+from .jwks import create_jwk
 from .jwks import public_jwk_from_private_jwk
 from AccessControl import ClassSecurityInfo
 from AccessControl.class_init import InitializeClass
@@ -393,6 +394,14 @@ class OIDCPlugin(BasePlugin):
 
     def get_public_jwks_fed(self):
         return [public_jwk_from_private_jwk(jwk) for jwk in self.get_private_jwks_fed()]
+
+    def init_private_jwks_core(self):
+        if not self.getProperty("jwks_core") or self.getProperty("jwks_core") == "[]":
+            enc_key = create_jwk()
+            enc_key["use"] = "enc"
+            sig_key = create_jwk()
+            sig_key["use"] = "sig"
+            self.jwks_core = json.dumps([enc_key, sig_key])
 
     def get_private_jwks_core(self):
         return json.loads(self.getProperty("jwks_core"))

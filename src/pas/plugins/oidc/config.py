@@ -13,8 +13,7 @@ OIDCFED_IDENTITY_PROVIDERS = {
     #   },
     "cie": {
         # "http://cie-provider.org:8002/oidc/op": "http://trust-anchor.org:8000",
-        "https://preproduzione.oidc.idserver.servizicie.interno.gov.it": 
-            "https://preprod.oidc.registry.servizicie.interno.gov.it",
+        "https://preproduzione.oidc.idserver.servizicie.interno.gov.it": "https://preprod.oidc.registry.servizicie.interno.gov.it",
     }
 }
 # ---------------------------------------------------------------

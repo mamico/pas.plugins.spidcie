@@ -1,5 +1,6 @@
 # from ..config import OIDCFED_DEFAULT_TRUST_ANCHOR
 from ..config import OIDCFED_IDENTITY_PROVIDERS
+
 # from ..config import OIDCFED_TRUST_ANCHORS
 from ..exceptions import InvalidTrustchain
 from ..exceptions import UnknownKid
