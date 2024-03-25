@@ -152,7 +152,8 @@ class LoginView(OidcRPView):
         _timestamp_now = int(datetime.now().timestamp())
         authz_data = dict(
             iss=self.pas.get_subject(),
-            scope=self.request.get("scope", None) or "openid",
+            # scope=self.request.get("scope", None) or "openid",
+            scope=self.pas.get_scopes(),
             redirect_uri=redirect_uri,
             response_type=self.pas.response_types[0],
             nonce=rndstr(32),
