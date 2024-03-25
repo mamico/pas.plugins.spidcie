@@ -399,7 +399,7 @@ class OIDCPlugin(BasePlugin):
         if not self.getProperty("jwks_core") or self.getProperty("jwks_core") == "[]":
             sig_key = create_jwk()
             sig_key["use"] = "sig"
-            enc_key = create_jwk(hash_func="RSA-OAEP")
+            enc_key = create_jwk(alg="RSA-OAEP")
             enc_key["use"] = "enc"
             self.jwks_core = json.dumps([sig_key, enc_key])
 
