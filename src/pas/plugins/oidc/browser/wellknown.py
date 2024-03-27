@@ -1,8 +1,5 @@
-# TODO: pub deve essere costruita direttamente dalal configurazione del replaying party
-# pub = get_federation_entity()
-# conf = FEDERATION_CONFIGURATIONS[0]
-# from ..config import FEDERATION_CONFIGURATIONS
 from ..jwtse import create_jws
+from ..jwtse import verify_jws
 from ..utils import iat_now
 from plone import api
 from Products.Five.browser import BrowserView
@@ -100,12 +97,15 @@ class EntityConfiguration(BrowserView):
                 self.request.response.setHeader(
                     "Content-Type", "application/entity-statement+jwt"
                 )
-                return create_jws(
+                jws = create_jws(
                     pub,
                     self.pas.get_private_jwks_fed()[0],
                     alg="RS256",  # conf["default_signature_alg"],
                     typ="entity-statement+jwt",
                 )
+                # DEBUG
+                verify_jws(jws, self.pas.get_public_jwks_fed()[0])
+                return jws
         elif self.name == "jwks.json":
             self.request.response.setHeader("Content-Type", "application/json")
             return json.dumps(
