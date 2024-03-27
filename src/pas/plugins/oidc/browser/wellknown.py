@@ -111,7 +111,7 @@ class EntityConfiguration(BrowserView):
                     typ="entity-statement+jwt",
                 )
                 # DEBUG
-                verify_jws(jws, self.pas.get_public_jwks_fed()[0])
+                # verify_jws(jws, self.pas.get_public_jwks_fed()[0])
                 return jws
         elif self.name == "jwks.json":
             self.request.response.setHeader("Content-Type", "application/json")
