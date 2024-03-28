@@ -1,4 +1,4 @@
-from ..config import OIDCFED_ACR_PROFILES
+# TODO from ..config import OIDCFED_ACR_PROFILES
 from ..config import RP_REQUEST_CLAIM_BY_PROFILE
 from ..config import RP_REQUEST_EXP
 from ..exceptions import InvalidTrustchain
@@ -434,7 +434,7 @@ class CallbackView(OidcRPView, OAuth2AuthorizationCodeGrant, OidcUserInfo):
 
         if not authz:
             # TODO: handle error status 401
-            error = {
+            context = {
                 "error": "unauthorized request",
                 "error_description": _("Authentication not found"),
             }

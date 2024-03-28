@@ -1,5 +1,6 @@
 from ..jwtse import create_jws
-from ..jwtse import verify_jws
+
+# DEBUG from ..jwtse import verify_jws
 from ..utils import iat_now
 from plone import api
 from Products.Five.browser import BrowserView

@@ -126,17 +126,12 @@ class OAuth2AuthorizationCodeGrant:
         """
         Access Token Request
         https://tools.ietf.org/html/rfc6749#section-4.1.3
+        https://docs.italia.it/italia/spid/spid-cie-oidc-docs/it/versione-corrente/token_endpoint.html
+        https://developersitalia.slack.com/archives/C75U26411/p1706267943964349?thread_ts=1700576159.261119&cid=C75U26411
         """
         client_id = self.pas.get_subject()
         grant_data = dict(
-            grant_type="authorization_code",
-            redirect_uri=redirect_uri,
             client_id=client_id,
-            state=state,
-            code=code,
-            code_verifier=code_verifier,
-            # here private_key_jwt
-            client_assertion_type="urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
             client_assertion=create_jws(
                 {
                     "iss": client_id,
@@ -146,11 +141,23 @@ class OAuth2AuthorizationCodeGrant:
                     "exp": exp_from_now(),
                     "jti": str(uuid.uuid4()),
                 },
+                # TODO: utilizzare la chiave marcata come use="sig" anzichè la prima,
+                # che potrebbe essere usata per cifrare
                 jwk_dict=self.pas.get_private_jwks_core()[0],
             ),
+            client_assertion_type="urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+            code=code,
+            code_verifier=code_verifier,
+            grant_type="authorization_code",
+            # non presenti in documentazione docs.italia.it, ma sia nell'implementazione
+            # Django che in quella Java
+            redirect_uri=redirect_uri,
+            state=state,
         )
 
-        logger.info(f"DEBUG: Access Token Request for {state}: {token_endpoint_url} {grant_data} ")
+        logger.info(
+            f"DEBUG: Access Token Request for {state}: {token_endpoint_url} {grant_data} "
+        )
         res = requests.post(
             token_endpoint_url,
             data=grant_data,
@@ -159,10 +166,10 @@ class OAuth2AuthorizationCodeGrant:
         )
         token_request = None
         if res.status_code != 200:  # pragma: no cover
-            logger.info(f"DEBUG: Access Token Response for {state}: {token_endpoint_url} {res.status_code} {res.content}")
-            logger.error(
-                f"Something went wrong with {state}: {res.status_code}"
+            logger.info(
+                f"DEBUG: Access Token Response for {state}: {token_endpoint_url} {res.status_code} {res.content}"
             )
+            logger.error(f"Something went wrong with {state}: {res.status_code}")
         else:
             try:
                 # token_request = json.loads(token_request.content.decode())
