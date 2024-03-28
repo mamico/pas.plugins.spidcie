@@ -531,8 +531,8 @@ class CallbackView(OidcRPView, OAuth2AuthorizationCodeGrant, OidcUserInfo):
                 "error": "invalid_token",
                 "error_description": _("Authentication token seems not to be valid."),
             }
-            # TODO
-            raise Exception(context)
+            self.request.response.setStatus(400)
+            return self.error_page(**context)
             # return render(request, self.error_template, context, status=403)
 
         try:
@@ -543,8 +543,8 @@ class CallbackView(OidcRPView, OAuth2AuthorizationCodeGrant, OidcUserInfo):
                 "error": "token verification failed",
                 "error_description": _("Authentication token validation error."),
             }
-            # TODO
-            raise Exception(context)
+            self.request.response.setStatus(400)
+            return self.error_page(**context)
             # return render(request, self.error_template, context, status=403)
 
         try:
@@ -555,12 +555,12 @@ class CallbackView(OidcRPView, OAuth2AuthorizationCodeGrant, OidcUserInfo):
                 "error": "token verification failed",
                 "error_description": _("ID token validation error."),
             }
-            # TODO
-            raise Exception(context)
+            self.request.response.setStatus(400)
+            return self.error_page(**context)
             # return render(request, self.error_template, context, status=403)
 
         decoded_id_token = unpad_jwt_payload(id_token)
-        # logger.debug(decoded_id_token)
+        logger.info(f"DEBUG ID TOKEN {id_token} {decoded_id_token}")
 
         try:
             verify_at_hash(decoded_id_token, access_token)
@@ -570,8 +570,8 @@ class CallbackView(OidcRPView, OAuth2AuthorizationCodeGrant, OidcUserInfo):
                 "error": "at_hash verification failed",
                 "error_description": _("at_hash validation error."),
             }
-            # TODO
-            raise Exception(context)
+            self.request.response.setStatus(400)
+            return self.error_page(**context)
             # return render(request, self.error_template, context, status=403)
 
         # decoded_access_token = unpad_jwt_payload(access_token)
@@ -600,8 +600,8 @@ class CallbackView(OidcRPView, OAuth2AuthorizationCodeGrant, OidcUserInfo):
                 "error": "invalid userinfo response",
                 "error_description": _("UserInfo response seems not to be valid"),
             }
-            # TODO
-            raise Exception(context)
+            self.request.response.setStatus(400)
+            return self.error_page(**context)
             # return render(request, self.error_template, context, status=400)
 
         # # here django user attr mapping
