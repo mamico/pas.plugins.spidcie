@@ -523,7 +523,7 @@ class CallbackView(OidcRPView, OAuth2AuthorizationCodeGrant, OidcUserInfo):
         op_id_jwk = get_jwk_from_jwt(id_token, jwks)
 
         if not op_ac_jwk or not op_id_jwk:
-            logger.warning(
+            logger.exception(
                 "Token signature validation error, "
                 f"the tokens were signed with a different kid from: {jwks}."
             )
@@ -538,7 +538,7 @@ class CallbackView(OidcRPView, OAuth2AuthorizationCodeGrant, OidcUserInfo):
         try:
             verify_jws(access_token, op_ac_jwk)
         except Exception as e:
-            logger.warning(f"Access Token signature validation error: {e} ")
+            logger.exception(f"Access Token signature validation error: {e} ")
             context = {
                 "error": "token verification failed",
                 "error_description": _("Authentication token validation error."),
@@ -550,7 +550,7 @@ class CallbackView(OidcRPView, OAuth2AuthorizationCodeGrant, OidcUserInfo):
         try:
             verify_jws(id_token, op_id_jwk)
         except Exception as e:
-            logger.warning(f"ID Token signature validation error: {e} ")
+            logger.exception(f"ID Token signature validation error: {e} ")
             context = {
                 "error": "token verification failed",
                 "error_description": _("ID token validation error."),
@@ -565,7 +565,9 @@ class CallbackView(OidcRPView, OAuth2AuthorizationCodeGrant, OidcUserInfo):
         try:
             verify_at_hash(decoded_id_token, access_token)
         except Exception as e:
-            logger.warning(f"at_hash validation error: {e} ")
+            logger.exception(
+                f"at_hash validation error: {e} {decoded_id_token} {access_token}"
+            )
             context = {
                 "error": "at_hash verification failed",
                 "error_description": _("at_hash validation error."),
