@@ -150,23 +150,25 @@ class OAuth2AuthorizationCodeGrant:
             ),
         )
 
-        logger.debug(f"Access Token Request for {state}: {grant_data} ")
-        token_request = requests.post(
+        logger.info(f"DEBUG: Access Token Request for {state}: {token_endpoint_url} {grant_data} ")
+        res = requests.post(
             token_endpoint_url,
             data=grant_data,
             # verify=HTTPC_PARAMS["connection"]["ssl"],
             # timeout=HTTPC_TIMEOUT,
         )
-
-        if token_request.status_code != 200:  # pragma: no cover
+        token_request = None
+        if res.status_code != 200:  # pragma: no cover
+            logger.info(f"DEBUG: Access Token Response for {state}: {token_endpoint_url} {res.status_code} {res.content}")
             logger.error(
-                f"Something went wrong with {state}: {token_request.status_code}"
+                f"Something went wrong with {state}: {res.status_code}"
             )
         else:
             try:
-                token_request = json.loads(token_request.content.decode())
+                # token_request = json.loads(token_request.content.decode())
+                token_request = res.json()
             except Exception as e:  # pragma: no cover
-                logger.error(f"Something went wrong with {state}: {e}")
+                logger.exception(f"Something went wrong with {state}: {e}")
         return token_request
 
 
