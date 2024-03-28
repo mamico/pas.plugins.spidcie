@@ -62,7 +62,7 @@ class EntityConfiguration(BrowserView):
                     "jwks": {
                         "keys": self.pas.get_public_jwks_core(),
                     },
-                    "jwks_uri": f"{sub}/.well-known/jwks.json",
+                    # "jwks_uri": f"{sub}/.well-known/jwks.json",
                     # "signed_jwks_uri": "http://relying-party.org:8001/oidc/rp/openid_relying_party/jwks.jose",
                     "client_name": self.pas.organization_name,
                     # "contacts": [self.pas.contact],
