@@ -26,7 +26,6 @@ from plone.protect.interfaces import IDisableCSRFProtection
 from Products.Five.browser import BrowserView
 from urllib.parse import quote
 from urllib.parse import urlencode
-from zExceptions import NotFound
 from zope.interface import alsoProvides
 
 import json
@@ -439,7 +438,8 @@ class CallbackView(OidcRPView, OAuth2AuthorizationCodeGrant, OidcUserInfo):
                 "error": "unauthorized request",
                 "error_description": _("Authentication not found"),
             }
-            raise NotFound(self.context, error)
+            self.request.response.setStatus(400)
+            return self.error_page(**context)
             # return render(request, self.error_template, context, status=401)
         # else:
         #     authz = authz.last()
@@ -494,7 +494,8 @@ class CallbackView(OidcRPView, OAuth2AuthorizationCodeGrant, OidcUserInfo):
                 "error_description": _("Token response seems not to be valid"),
             }
             # TODO: handle error status 400
-            raise NotFound(self.context, context)
+            self.request.response.setStatus(400)
+            return self.error_page(**context)
             # return render(request, self.error_template, context, status=400)
 
         else:
