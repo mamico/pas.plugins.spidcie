@@ -1,0 +1,58 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:browser="http://namespaces.zope.org/browser"
+    xmlns:plone="http://namespaces.plone.org/plone"
+    i18n_domain="pas.plugins.spidcie"
+    >
+
+  <browser:page
+      name="login"
+      for="pas.plugins.spidcie.plugins.IOIDCPlugin"
+      class=".view.LoginView"
+      permission="zope2.View"
+      layer="pas.plugins.spidcie.interfaces.IPasPluginsOidcLayer"
+      />
+
+  <browser:page
+      name="require_login"
+      for="pas.plugins.spidcie.plugins.IOIDCPlugin"
+      class=".view.RequireLoginView"
+      permission="zope2.View"
+      layer="pas.plugins.spidcie.interfaces.IPasPluginsOidcLayer"
+      />
+
+  <browser:page
+      name="logout"
+      for="pas.plugins.spidcie.plugins.IOIDCPlugin"
+      class=".view.LogoutView"
+      permission="zope2.View"
+      layer="pas.plugins.spidcie.interfaces.IPasPluginsOidcLayer"
+      />
+
+  <browser:page
+      name="callback"
+      for="pas.plugins.spidcie.plugins.IOIDCPlugin"
+      class=".view.CallbackView"
+      permission="zope2.View"
+      layer="pas.plugins.spidcie.interfaces.IPasPluginsOidcLayer"
+      />
+
+  <!-- TODO: spostare sulla root del sito -->
+  <browser:page
+      name=".well-known"
+      for="pas.plugins.spidcie.plugins.IOIDCPlugin"
+      class=".wellknown.EntityConfiguration"
+      permission="zope2.View"
+      layer="pas.plugins.spidcie.interfaces.IPasPluginsOidcLayer"
+      />
+
+  <!-- TODO: spostare sulla root del sito -->
+  <browser:page
+      name="resolve"
+      for="pas.plugins.spidcie.plugins.IOIDCPlugin"
+      class=".rp.ResolveView"
+      permission="zope2.View"
+      layer="pas.plugins.spidcie.interfaces.IPasPluginsOidcLayer"
+      />
+
+</configure>

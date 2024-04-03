@@ -1,4 +1,4 @@
-"""Installer for the pas.plugins.oidc package."""
+"""Installer for the pas.plugins.spidcie package."""
 from pathlib import Path
 from setuptools import find_packages
 from setuptools import setup
@@ -12,7 +12,7 @@ long_description = f"""
 
 
 setup(
-    name="pas.plugins.oidc",
+    name="pas.plugins.spidcie",
     version="2.0.0a2.dev0",
     description="An add-on for Plone",
     long_description=long_description,
@@ -35,12 +35,12 @@ setup(
     keywords="Python Plone CMS",
     author="mamico",
     author_email="mauro.amico@gmail.com",
-    url="https://github.com/collective/pas.plugins.oidc",
+    url="https://github.com/collective/pas.plugins.spidcie",
     project_urls={
-        "PyPI": "https://pypi.python.org/pypi/pas.plugins.oidc",
-        "Source": "https://github.com/collective/pas.plugins.oidc",
-        "Tracker": "https://github.com/collective/pas.plugins.oidc/issues",
-        # 'Documentation': 'https://pas.plugins.oidc.readthedocs.io/en/latest/',
+        "PyPI": "https://pypi.python.org/pypi/pas.plugins.spidcie",
+        "Source": "https://github.com/collective/pas.plugins.spidcie",
+        "Tracker": "https://github.com/collective/pas.plugins.spidcie/issues",
+        # 'Documentation': 'https://pas.plugins.spidcie.readthedocs.io/en/latest/',
     },
     license="GPL version 2",
     packages=find_packages("src", exclude=["ez_setup"]),
@@ -77,6 +77,6 @@ setup(
     [z3c.autoinclude.plugin]
     target = plone
     [console_scripts]
-    update_locale = pas.plugins.oidc.locales.update:update_locale
+    update_locale = pas.plugins.spidcie.locales.update:update_locale
     """,
 )

@@ -17,14 +17,14 @@ check_manifest_ignores = """
     "constraints-mxdev.txt",
     "requirements-mxdev.txt",
 """
-towncrier_issue_format = "[#{issue}](https://github.com/collective/pas.plugins.oidc/issues/{issue})"
+towncrier_issue_format = "[#{issue}](https://github.com/collective/pas.plugins.spidcie/issues/{issue})"
 extra_lines = """
 [tool.coverage.run]
 omit = ["*/locales/*"]
 
 [tool.bandit]
 targets = "src"
-exclude_dirs = ["tests", "src/pas/plugins/oidc/locales"]
+exclude_dirs = ["tests", "src/pas/plugins/spidcie/locales"]
 """
 
 [gitignore]

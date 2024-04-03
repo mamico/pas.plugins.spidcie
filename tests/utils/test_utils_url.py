@@ -1,4 +1,4 @@
-from pas.plugins.oidc import utils
+from pas.plugins.spidcie import utils
 from plone import api
 
 import pytest
@@ -29,7 +29,7 @@ class TestUtilsURL:
 class TestUtilsProcessCameFrom:
     @pytest.fixture(autouse=True)
     def _initialize(self, portal):
-        from pas.plugins.oidc.session import Session
+        from pas.plugins.spidcie.session import Session
 
         request = api.env.getRequest()
         session = Session(request, False)

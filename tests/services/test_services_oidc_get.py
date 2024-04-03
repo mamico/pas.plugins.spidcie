@@ -1,4 +1,4 @@
-from pas.plugins.oidc import PACKAGE_NAME
+from pas.plugins.spidcie import PACKAGE_NAME
 from urllib.parse import parse_qsl
 from urllib.parse import urlparse
 

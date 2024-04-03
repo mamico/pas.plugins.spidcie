@@ -3,6 +3,6 @@ default_context:
     initial_user_password: 'admin'
 
     load_zcml:
-        package_includes: ['pas.plugins.oidc']
+        package_includes: ['pas.plugins.spidcie']
 
     db_storage: direct

@@ -1,5 +1,5 @@
-from pas.plugins.oidc import utils
-from pas.plugins.oidc.session import Session
+from pas.plugins.spidcie import utils
+from pas.plugins.spidcie.session import Session
 
 import os
 import pytest

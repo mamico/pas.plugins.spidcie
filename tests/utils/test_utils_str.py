@@ -1,4 +1,4 @@
-from pas.plugins.oidc import utils
+from pas.plugins.spidcie import utils
 
 import pytest
 
