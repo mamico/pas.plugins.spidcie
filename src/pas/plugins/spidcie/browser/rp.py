@@ -52,7 +52,7 @@ class OidcRPView(BrowserView):
         get available trust to a specific OP
         """
         request = self.request
-        provider = request.get("provider", None)
+        provider = request.get("provider", self.pas.default_provider)
         if not provider:
             logger.warning(
                 "Missing provider url. Please try '?provider=https://provider-subject/'"
@@ -74,7 +74,7 @@ class OidcRPView(BrowserView):
                     break
 
         # if not trust_anchor:
-        #     trust_anchor = OIDCFED_DEFAULT_TRUST_ANCHOR
+        #     trust_anchor = OIDCFED_DEFAULT_TsRUST_ANCHOR
 
         tc = self.pas.get_trust_chain(provider, trust_anchor)
         # tc = TrustChain.objects.filter(

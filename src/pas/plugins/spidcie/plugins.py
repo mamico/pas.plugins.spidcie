@@ -13,8 +13,9 @@ from plone.base.utils import safe_text
 from plone.protect.interfaces import IDisableCSRFProtection
 from plone.protect.utils import safeWrite
 from Products.CMFCore.utils import getToolByName
-from Products.PluggableAuthService.interfaces.plugins import IAuthenticationPlugin
+
 # from Products.PluggableAuthService.interfaces.plugins import IChallengePlugin
+from Products.PluggableAuthService.interfaces.plugins import IAuthenticationPlugin
 from Products.PluggableAuthService.interfaces.plugins import IUserAdderPlugin
 from Products.PluggableAuthService.plugins.BasePlugin import BasePlugin
 from Products.PluggableAuthService.utils import classImplements
@@ -79,6 +80,9 @@ class OIDCPlugin(BasePlugin):
     use_deprecated_redirect_uri_for_logout = False
     use_modified_openid_schema = False
     user_property_as_userid = "https://attributes.eid.gov.it/fiscal_number"
+    default_profile = "cie"
+    default_provider = "https://preproduzione.oidc.idserver.servizicie.interno.gov.it"
+    trust_marks = "[]"
 
     # TODO: move to settings ?
     autority_hints = (
@@ -113,6 +117,19 @@ class OIDCPlugin(BasePlugin):
             type="lines",
             mode="w",
             label="autority_hints",
+        ),
+        dict(id="default_profile", type="string", mode="w", label="Default profile"),
+        dict(
+            id="default_provider",
+            type="string",
+            mode="w",
+            label="Default provider",
+        ),
+        dict(
+            id="trust_marks",
+            type="text",
+            mode="w",
+            label="Trust Marks",
         ),
         # --- oidc
         dict(
