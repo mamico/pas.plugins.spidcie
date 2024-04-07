@@ -209,13 +209,13 @@ class OidcUserInfo(object):
 
         if authz_userinfo.status_code != 200:  # pragma: no cover
             logger.error(
-                f"Something went wrong with {state}: {authz_userinfo.status_code}"
+                f"Something went wrong with {state}: {authz_userinfo.status_code} {authz_userinfo.content}"
             )
             return False
         else:
             try:
                 # if application/json ... let it be
-                return authz_userinfo.json()
+                return authz_userinfo.jsonauthz_userinfo()
             except Exception:
                 logger.debug("userinfo response is not in plain json")
 
