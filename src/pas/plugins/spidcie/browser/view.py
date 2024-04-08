@@ -397,10 +397,12 @@ class CallbackView(OidcRPView, OAuth2AuthorizationCodeGrant, OidcUserInfo):
 
         # error_template = "rp_error.html"
         if "error" in self.request:
-            # TODO: handle error status 401
-            raise NotImplementedError(
-                "Error handling not implemented yet", self.request.get("error")
-            )
+            context = {
+                "error": "unauthorized request",
+                "error_description": self.request.get("error"),
+            }
+            self.request.response.setStatus(401)
+            return self.error_page(**context)
 
         # {'code': 'c35dce7965cb5...',
         #  'state': 'Q9wkbVdhnq2DZG7yxouoUEU8oN1GLmIs',
