@@ -561,7 +561,7 @@ class CallbackView(OidcRPView, OAuth2AuthorizationCodeGrant, OidcUserInfo):
             return self.error_page(**context)
             # return render(request, self.error_template, context, status=403)
 
-        # 2024-04-07 12:54:48,867 INFO    [pas.plugins.spidcie:563][MainThread] DEBUG ID TOKEN eyJraWQiOiJkZWZhdWx0UlNBU2lnbiIsImFsZyI6IlJTMjU2In0.eyJhdF9oYXNoIjoiSHc0RVVxTG92cGY0bmFCcmlFVTlLUSIsInN1YiI6IlJNTTc2SDU0Q1NETERNRFBWNVhTRFFXNEdLQlNGVVVYQGlkc2VydmVyLnNlcnZpemljaWUuaW50ZXJuby5nb3YuaXQiLCJodHRwczovL2F0dHJpYnV0ZXMuZWlkLmdvdi5pdC9maXNjYWxfbnVtYmVyIjoiVElOSVQtTUNBQ05aMDRFNTdBOTQ0SSIsImlzcyI6Imh0dHBzOi8vb2lkYy5pZHNlcnZlci5zZXJ2aXppY2llLmludGVybm8uZ292Lml0IiwiZ2l2ZW5fbmFtZSI6IkNJTlpJQSIsIm5vbmNlIjoiWUpQNjV6R0hxU2ZJM0huUklNYU1hMWhzd0IzQmRCaUUiLCJhdWQiOiJodHRwczovL3d3dy5jb211bmUuc2VycmVudGkuc3UuaXQvb2lkYyIsImFjciI6Imh0dHBzOi8vd3d3LnNwaWQuZ292Lml0L1NwaWRMMiIsImV4cCI6MTcxMjQ5MDg4OCwiaWF0IjoxNzEyNDg3Mjg4LCJmYW1pbHlfbmFtZSI6IkFNSUNPIiwianRpIjoiMTBkOWEzNmUtZTZkMC00ZDY1LTljYmYtMzVlOTUxNTA3MTg2In0.pUgdsldGFO7egBY6GeKaorf_yqkDuWXQgeOPcGvUv65Xov50JKPNnlXzPfMNqo_jNXe2EVLH_ZEBOfunuLE7lPfi8WS1FSRDQI8o_MsU5XzUp_QUWpDy-j7nrPJu2hc_1H4SO36OCcqMujppzqFQElfShG8zjCfSHPwllzYmNfSVBdwLuQaSGeSVacil8LyBJiX6ht6Dts6DI1-h3vMFpX4YXpscmgKasd0DBZdMtXhkJrkXtsgp7rYjYod6vYJH6-hkYae43ZaASPNseHTiOAMhZkuDIirz5Rn7UpBJonGHYYqGinaknth3k6tBpxS8aLS4DBsdjy85kFEBPrY-XQ
+        # 2024-04-07 12:54:48,867 INFO    [pas.plugins.spidcie:563][MainThread] DEBUG ID TOKEN ...
         # {'at_hash': 'Hw4EUqLovpf4naBriEU9KQ',
         #  'sub': 'RMM76H54CSDLDMDPV5XSDQW4GKBSFUUX@idserver.servizicie.interno.gov.it',
         #  'https://attributes.eid.gov.it/fiscal_number': 'TINIT-....',

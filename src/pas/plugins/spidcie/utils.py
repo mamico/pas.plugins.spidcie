@@ -125,7 +125,8 @@ def pkce_code_verifier_challenge(value: str) -> str:
     See https://www.stefaanlippens.net/oauth-code-flow-pkce.html#PKCE-code-verifier-and-challenge
     """
     hash_code = sha256(value.encode("utf-8")).digest()
-    return base64.urlsafe_b64encode(hash_code).decode("utf-8").replace("=", "")
+    # XXX: 128 bytes is the max length for CIE
+    return base64.urlsafe_b64encode(hash_code).decode("utf-8").replace("=", "")[:128]
 
 
 def authorization_flow_args(plugin: plugins.OIDCPlugin, session: Session) -> dict:
