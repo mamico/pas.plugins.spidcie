@@ -321,6 +321,8 @@ def get_pkce(code_challenge_method: str = "S256", code_challenge_length: int = 6
         "utf-8"
     )
     code_verifier = re.sub("[^a-zA-Z0-9]+", "", code_verifier)
+    # XXX: max length 128
+    code_verifier = code_verifier[:128]
 
     code_challenge = hashers.get(code_challenge_method)(
         code_verifier.encode("utf-8")
