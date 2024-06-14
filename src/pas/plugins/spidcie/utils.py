@@ -17,6 +17,7 @@ from plone.event.utils import default_timezone as fallback_default_timezone
 from plone.event.utils import validated_timezone
 from plone.registry.interfaces import IRegistry
 from secrets import token_hex
+import secrets
 from typing import Union
 from zope.component import getUtility
 
@@ -28,6 +29,7 @@ import pytz
 import random
 import re
 import requests
+import string
 
 
 def boolean_string_ser(val, sformat=None, lev=0):
@@ -316,13 +318,18 @@ def get_current_timezone():
 def get_pkce(code_challenge_method: str = "S256", code_challenge_length: int = 64):
     hashers = {"S256": hashlib.sha256}
 
-    code_verifier_length = random.randint(43, 128)  # nosec - B311
-    code_verifier = base64.urlsafe_b64encode(os.urandom(code_verifier_length)).decode(
-        "utf-8"
-    )
-    code_verifier = re.sub("[^a-zA-Z0-9]+", "", code_verifier)
+    # code_verifier_length = random.randint(43, 128)  # nosec - B311
+    #code_verifier = base64.urlsafe_b64encode(os.urandom(code_verifier_length)).decode(
+    #    "utf-8"
+    #)
+    #code_verifier = re.sub("[^a-zA-Z0-9]+", "", code_verifier)
     # XXX: max length 128
-    code_verifier = code_verifier[:128]
+    #code_verifier = code_verifier[:128]
+
+    # https://datatracker.ietf.org/doc/html/rfc7636#section-4.1
+    code_verifier_length = secrets.choice(range(43, 128 + 1))
+    alpha = string.ascii_letters + string.digits + "-._~"
+    code_verifier = "".join([secrets.choice(alpha) for _ in range(code_verifier_length)])
 
     code_challenge = hashers.get(code_challenge_method)(
         code_verifier.encode("utf-8")
