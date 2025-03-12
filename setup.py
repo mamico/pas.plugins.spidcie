@@ -13,7 +13,7 @@ long_description = f"""
 
 setup(
     name="pas.plugins.spidcie",
-    version="2.0.0a2.dev0",
+    version="2.0.0a2",
     description="An add-on for Plone",
     long_description=long_description,
     long_description_content_type="text/markdown",
