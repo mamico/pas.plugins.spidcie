@@ -146,6 +146,8 @@ ignore = [
     "news/*",
     "constraints-mxdev.txt",
     "requirements-mxdev.txt",
+    ".isort.cfg",
+    "buildout.cfg",
 
 ]
 ##

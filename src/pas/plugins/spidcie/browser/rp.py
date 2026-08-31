@@ -179,7 +179,7 @@ class OAuth2AuthorizationCodeGrant:
         return token_request
 
 
-class OidcUserInfo(object):
+class OidcUserInfo:
     """
     https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
     """
@@ -243,7 +243,7 @@ class OidcUserInfo(object):
                 logger.error(f"Userinfo response error {state}: {e}")
                 return False
             except UnknownKid as e:
-                logger.error(f"Userinfo Unknow KID for session {state}: {e}")
+                logger.error(f"Userinfo Unknown KID for session {state}: {e}")
                 return False
             except Exception as e:  # pragma: no cover
                 logger.error(f"Userinfo response unknown error {state}: {e}")

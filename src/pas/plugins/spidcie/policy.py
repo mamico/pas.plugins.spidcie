@@ -332,7 +332,7 @@ def apply_policy(metadata, policy):
 
         if claim not in metadata:
             if "essential" in policy[claim] and policy[claim]["essential"]:
-                raise PolicyError("Essential claim '{}' missing".format(claim))
+                raise PolicyError(f"Essential claim '{claim}' missing")
 
     # All that are in metadata but not in policy should just remain
 

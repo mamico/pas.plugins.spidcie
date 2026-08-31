@@ -185,7 +185,7 @@ class EntityConfiguration:
 
     def validate_by_allowed_trust_marks(self) -> bool:
         """
-        validate the entity configuration ony if marked by a well known
+        validate the entity configuration only if marked by a well known
         trust mark, issued by a trusted issuer
         """
 
@@ -209,7 +209,6 @@ class EntityConfiguration:
         trust_marks = []
         is_valid = False
         for tm in self.payload["trust_marks"]:
-
             if tm.get("id", None) not in self.filter_by_allowed_trust_marks:
                 continue
 

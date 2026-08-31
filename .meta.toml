@@ -16,6 +16,8 @@ check_manifest_ignores = """
     "news/*",
     "constraints-mxdev.txt",
     "requirements-mxdev.txt",
+    ".isort.cfg",
+    "buildout.cfg",
 """
 towncrier_issue_format = "[#{issue}](https://github.com/collective/pas.plugins.spidcie/issues/{issue})"
 extra_lines = """

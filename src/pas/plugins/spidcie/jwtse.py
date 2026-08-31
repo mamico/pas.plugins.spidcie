@@ -45,7 +45,7 @@ def verify_jws(jws: str, pub_jwk: dict, **kwargs) -> str:
 
     _alg = _head["alg"]
     if _alg not in SIGNING_ALG_VALUES_SUPPORTED or not _alg:  # pragma: no cover
-        raise UnsupportedAlgorithm(f"{_alg} has beed disabled for security reason")
+        raise UnsupportedAlgorithm(f"{_alg} has been disabled for security reason")
 
     verifier = JWS(alg=_head["alg"], **kwargs)
     msg = verifier.verify_compact(jws, [_key])
@@ -88,7 +88,7 @@ def decrypt_jwe(jwe: str, jwk_dict: dict) -> dict:
     jwe_header.get("kid")
 
     if _alg not in ENCRYPTION_ALG_VALUES_SUPPORTED:  # pragma: no cover
-        raise UnsupportedAlgorithm(f"{_alg} has beed disabled for security reason")
+        raise UnsupportedAlgorithm(f"{_alg} has been disabled for security reason")
 
     _decryptor = factory(jwe, alg=_alg, enc=_enc)
 
