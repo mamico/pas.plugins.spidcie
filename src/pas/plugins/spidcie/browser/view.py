@@ -194,7 +194,13 @@ class LoginView(OidcRPView):
             # TODO: better have here an organization name
             provider_id=tc.sub,
             data=json.dumps(authz_data),
-            provider_configuration=provider_metadata,
+            # NOTE: provider_configuration is intentionally NOT stored here.
+            # It's the full OP entity/metadata (JWKS included) and is
+            # identical for every session entry of a given provider; storing
+            # it per-entry was the main driver of the session store growth
+            # (see #45). It's re-read from the cached trust chain at callback
+            # time via provider_id, which is already static per-provider data
+            # cached on the plugin (see plugins.get_trust_chain).
             came_from=self.request.get("came_from"),
         )
 
@@ -416,7 +422,10 @@ class CallbackView(OidcRPView, OAuth2AuthorizationCodeGrant, OidcUserInfo):
         # TODO: search session server side
         # authz = utils.load_existing_session(self.context, self.request)
         session = Session(self.request, use_session_data_manager=False)
-        authz = session.get(self.request.get("state"))
+        # pop (not get): the callback consumes the state, making it single-use
+        # (the correct defense against callback replay) and keeping the
+        # session store from growing unbounded (see #45).
+        authz = session.pop(self.request.get("state"))
 
         # request_args = {k: v for k, v in request.GET.items()}
         # try:
@@ -446,6 +455,22 @@ class CallbackView(OidcRPView, OAuth2AuthorizationCodeGrant, OidcUserInfo):
         # else:
         #     authz = authz.last()
         # authz = authz.get("authz")
+
+        # provider_configuration is no longer stored on the session entry
+        # (see LoginView.__call__): it's the OP's own metadata, identical
+        # for every entry of that provider, and is already cached on the
+        # plugin as part of the trust chain. Re-read it here via provider_id.
+        # NOTE: get_trust_chain() currently looks up by provider only and
+        # ignores trust_anchor.
+        tc = self.context.get_trust_chain(authz.get("provider_id"), None)
+        provider_configuration = tc.metadata.get("openid_provider") if tc else None
+        if not provider_configuration:
+            context = {
+                "error": "request rejected",
+                "error_description": _("Trust Chain is unavailable."),
+            }
+            self.request.response.setStatus(400)
+            return self.error_page(**context)
 
         code = self.request.get("code")
         # TODO: validate iss
@@ -486,7 +511,7 @@ class CallbackView(OidcRPView, OAuth2AuthorizationCodeGrant, OidcUserInfo):
             code=code,
             issuer_id=authz.get("provider_id"),
             # client_conf=self.rp_conf,
-            token_endpoint_url=authz.get("provider_configuration")["token_endpoint"],
+            token_endpoint_url=provider_configuration["token_endpoint"],
             audience=[authz.get("provider_id")],
             code_verifier=authz_data.get("code_verifier"),
         )
@@ -517,7 +542,7 @@ class CallbackView(OidcRPView, OAuth2AuthorizationCodeGrant, OidcUserInfo):
             #         status = 400
             #     )
             pass
-        jwks = get_jwks(authz["provider_configuration"])
+        jwks = get_jwks(provider_configuration)
         access_token = token_response["access_token"]
         id_token = token_response["id_token"]
 
@@ -607,7 +632,7 @@ class CallbackView(OidcRPView, OAuth2AuthorizationCodeGrant, OidcUserInfo):
         user_info = self.get_userinfo(
             authz["state"],
             access_token,
-            authz["provider_configuration"],
+            provider_configuration,
             verify=False,  # TODO
             # verify=HTTPC_PARAMS.get("connection", {}).get("ssl", True)
         )

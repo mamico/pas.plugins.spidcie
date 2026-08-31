@@ -1,0 +1,1 @@
+Fix unbounded ZODB growth of the OIDC session store: switch it from `PersistentMapping` to `OOBTree` so each login only rewrites its own entry instead of the whole store, stop duplicating the OP's full provider configuration in every entry, and pop (instead of get) the entry at the callback so a consumed authorization state is removed and cannot be replayed [mamico]

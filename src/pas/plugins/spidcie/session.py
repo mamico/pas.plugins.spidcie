@@ -1,4 +1,4 @@
-from persistent.mapping import PersistentMapping
+from BTrees.OOBTree import OOBTree
 from plone import api
 from zope.annotation.interfaces import IAnnotations
 
@@ -19,9 +19,21 @@ class Session:
 
         self.use_session_data_manager = True
         portal = api.portal.get()
-        if SESSION_KEY not in IAnnotations(portal):
-            IAnnotations(portal)[SESSION_KEY] = PersistentMapping()
-        self._session = IAnnotations(portal)[SESSION_KEY]
+        annotations = IAnnotations(portal)
+        store = annotations.get(SESSION_KEY)
+        if not isinstance(store, OOBTree):
+            # First access after upgrade, or brand new store: (re)create it as
+            # an OOBTree so that every login only rewrites the bucket it
+            # touches instead of the whole mapping (see #45 growth issue).
+            # Migrate any pre-existing PersistentMapping data in place; this
+            # single migration commit rewrites the old store once, then the
+            # problem is closed.
+            new_store = OOBTree()
+            if store:
+                new_store.update(store)
+            annotations[SESSION_KEY] = new_store
+            store = new_store
+        self._session = store
 
         # self.use_session_data_manager = use_session_data_manager
         # if self.use_session_data_manager:
@@ -46,10 +58,17 @@ class Session:
         #             path="/",   # ???
         #         )
 
-    def get(self, name):
-        return self._session[name]
-        # if self.use_session_data_manager:
-        return self._session.get(name)
+    def get(self, name, default=None):
+        return self._session.get(name, default)
+
+    def pop(self, name, default=None):
+        """Remove and return an entry, e.g. to consume a one-time OIDC state.
+
+        Using pop (rather than get) at the callback makes the state
+        single-use, which is also the correct defense against replay of the
+        callback, and keeps the store from growing unbounded (see #45).
+        """
+        return self._session.pop(name, default)
 
     def keys(self):
         return self._session.keys()
