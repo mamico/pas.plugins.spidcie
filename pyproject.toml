@@ -160,10 +160,6 @@ ignore = [
 [tool.coverage.run]
 omit = ["*/locales/*"]
 
-[tool.bandit]
-targets = "src"
-exclude_dirs = ["tests", "src/pas/plugins/spidcie/locales"]
-
 ##
 # Add extra configuration options in .meta.toml:
 #  [pyproject]

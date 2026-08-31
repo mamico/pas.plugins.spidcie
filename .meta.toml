@@ -21,10 +21,6 @@ towncrier_issue_format = "[#{issue}](https://github.com/collective/pas.plugins.s
 extra_lines = """
 [tool.coverage.run]
 omit = ["*/locales/*"]
-
-[tool.bandit]
-targets = "src"
-exclude_dirs = ["tests", "src/pas/plugins/spidcie/locales"]
 """
 
 [gitignore]
@@ -47,12 +43,8 @@ jobs = [
     "release_ready",
     ]
 
-[pre_commit]
-extra_lines = """
-- repo: https://github.com/PyCQA/bandit
-  rev: '1.7.5'
-  hooks:
-  - id: bandit
-    args: ["-c", "pyproject.toml"]
-    additional_dependencies: ["bandit[toml]"]
-"""
+##
+# SAST was previously bandit, removed because its pre-commit environment
+# was broken in CI (bandit pulling a pbr-less setuptools -> ModuleNotFoundError).
+# To be reinstated with ruff.
+##
