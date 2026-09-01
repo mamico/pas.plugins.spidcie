@@ -249,7 +249,7 @@ class OIDCPlugin(BasePlugin):
                                     membershipTool.createMemberArea(user_id)
                             except (ConflictError, KeyboardInterrupt):
                                 raise
-                            except Exception:  # nosec B110
+                            except Exception:  # noqa: S110
                                 # Silently ignored exception, but seems fine here.
                                 # Logging would likely generate too much noise,
                                 # depending on your setup.

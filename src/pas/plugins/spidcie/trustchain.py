@@ -124,7 +124,7 @@ class TrustChain:
         return self.is_active and ENTITY_STATUS[self.status]
 
     def __str__(self):
-        return "{} [{}] [{}]".format(self.sub, self.trust_anchor, self.is_valid)
+        return f"{self.sub} [{self.trust_anchor}] [{self.is_valid}]"
 
     def update(self, **kwargs):
         # TODO: update the trust chain in the plugin storage
@@ -191,7 +191,7 @@ def get_or_create_trust_chain(
     tc = pas.get_trust_chain(subject, trust_anchor)
 
     if tc and not tc.is_active:
-        # if manualy disabled by staff
+        # if manually disabled by staff
         return None
     elif force or not tc or tc.is_expired:
         tc_builder = trust_chain_builder(
@@ -305,7 +305,6 @@ class TrustChainBuilder:
         #
         **kwargs,
     ) -> None:
-
         self.subject = subject
         self.subject_configuration = subject_configuration
         self.httpc_params = httpc_params
