@@ -9,6 +9,26 @@
 
 <!-- towncrier release notes start -->
 
+## 2.0.0a3 (2026-09-01)
+
+
+### New features:
+
+- Added Deutsch translation
+  [@macagua] [#45](https://github.com/collective/pas.plugins.spidcie/issues/45)
+- Add a standalone SAST workflow (`.github/workflows/sast.yml`) running `ruff check --select S` (the flake8-bandit rules ported to ruff), replacing the bandit hook removed earlier. Fixed the findings it surfaced: missing `timeout` on the token/userinfo/federation HTTP requests, and ported the existing `try`/`except`/`pass` suppression from bandit's `# nosec` to ruff's `# noqa` syntax [mamico] [#49](https://github.com/collective/pas.plugins.spidcie/issues/49)
+
+
+### Bug fixes:
+
+- Fix unbounded ZODB growth of the OIDC session store: switch it from `PersistentMapping` to `OOBTree` so each login only rewrites its own entry instead of the whole store, stop duplicating the OP's full provider configuration in every entry, and pop (instead of get) the entry at the callback so a consumed authorization state is removed and cannot be replayed [mamico] [#46](https://github.com/collective/pas.plugins.spidcie/issues/46)
+
+
+### Internal:
+
+- Remove bandit from pre-commit/CI: its hook environment is broken (`ModuleNotFoundError: No module named 'pbr'` when bandit starts). SAST is to be reinstated with ruff [mamico] [#47](https://github.com/collective/pas.plugins.spidcie/issues/47)
+- Fix the qa/dependencies/release_ready CI checks, exercised here for the first time (first PR ever opened on this fork): apply pending pyupgrade/isort/black/zpretty formatting, drop unused imports, fix typos, extend the check-manifest ignore list, pin `setuptools<80` for the dependencychecker env (its pinned `z3c.dependencychecker==2.11` needs `pkg_resources`, removed from later setuptools), declare `requests`/`cryptography` as direct install requirements, and stop the release-check env from picking up Plone's own release constraints (which pin a twine/pkginfo too old to read the sdist metadata `python -m build` now produces) [mamico] [#48](https://github.com/collective/pas.plugins.spidcie/issues/48)
+
 ## 2.0.0a3 (unreleased)
 
 

@@ -1,1 +1,0 @@
-Remove bandit from pre-commit/CI: its hook environment is broken (`ModuleNotFoundError: No module named 'pbr'` when bandit starts). SAST is to be reinstated with ruff [mamico]
