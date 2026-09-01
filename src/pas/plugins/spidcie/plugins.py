@@ -1,6 +1,7 @@
 from . import logger
 from .jwks import create_jwk
 from .jwks import public_jwk_from_private_jwk
+from .jwtse import unpad_jwt_payload
 from AccessControl import ClassSecurityInfo
 from AccessControl.class_init import InitializeClass
 from contextlib import contextmanager
@@ -30,9 +31,21 @@ import itertools
 import json
 import plone.api as api
 import string
+import time
 
 
 PWCHARS = string.ascii_letters + string.digits + string.punctuation
+
+# Trust marks turned out to be valid for months (~1 year observed via
+# /resolve for CIE), not the ~24h the portal's own UI misleadingly
+# suggests -- see resolve_trust_marks()'s docstring and the README. A
+# daily refresh is therefore plenty, and the warning threshold needs to
+# be weeks, not hours: at 24h-before-expiry, a months-long validity
+# window means the warning would fire the day before a failure nobody
+# has time left to react to. This is what let the underlying renewal
+# failure go unnoticed for 17 months on the site that prompted this fix.
+TRUST_MARK_CACHE_TTL = 24 * 3600
+TRUST_MARK_EXPIRY_WARNING = 30 * 24 * 3600
 
 
 def format_redirect_uris(uris: List[str]) -> List[str]:
@@ -478,6 +491,90 @@ class OIDCPlugin(BasePlugin):
         if not hasattr(self, "_trust_chains"):
             self._trust_chains = PersistentMapping()
         self._trust_chains[subject] = tc
+
+    def get_current_trust_marks(self):
+        """Return the RP's trust marks, refreshed from the federation registry.
+
+        Trust marks are valid for months (not the ~24h the federation
+        portal's own UI misleadingly suggests -- see resolve_trust_marks)
+        but are never renewed on their own: without refreshing them here,
+        this RP eventually stops being accepted by the OP, silently and
+        with nothing in the logs, and the long validity window is what
+        lets that go unnoticed for a long time rather than a day.
+
+        On every successful fetch, the result is persisted back onto the
+        `trust_marks` property itself -- it stops being a value an admin
+        sets once by hand and instead becomes an auto-updated "last known
+        good" cache. That matters for the failure path: falling back to a
+        value nothing ever refreshes (what this used to do) is no fallback
+        at all, since by definition it will always be expired too. Falling
+        back to the last trust marks that were *actually* accepted degrades
+        far more gracefully, and also survives a process restart, unlike
+        the in-memory `_v_` cache checked first below (kept because this is
+        cheap enough to refetch daily that hitting the ZODB on every
+        request would be unnecessary; also incidentally fixes a real
+        problem the previous property-only read had, where a change only
+        took effect for a given process after it was restarted).
+        """
+        from .trustchain import resolve_trust_marks
+
+        cache = getattr(self, "_v_trust_marks_cache", None)
+        now = time.time()
+        if cache and now - cache["fetched_at"] < TRUST_MARK_CACHE_TTL:
+            return cache["trust_marks"]
+
+        fetched = []
+        for anchor in self.autority_hints:
+            try:
+                fetched.extend(resolve_trust_marks(self.get_subject(), anchor))
+            except Exception:
+                logger.exception(f"Failed to resolve trust marks from {anchor}")
+
+        if fetched:
+            serialized = json.dumps(fetched)
+            if serialized != self.trust_marks:
+                # only write when it actually changed: this refreshes at
+                # most daily and, with a months-long validity, would
+                # otherwise write an identical blob on every refresh --
+                # in a history-preserving ZODB, a needless revision kept
+                # around until the next pack. The exact mistake the other
+                # PR in this package exists to fix, just at a much smaller
+                # scale here.
+                alsoProvides(api.env.getRequest(), IDisableCSRFProtection)
+                self.trust_marks = serialized
+        else:
+            logger.warning(
+                "Could not refresh trust marks from any federation registry "
+                f"({', '.join(self.autority_hints)}); falling back to the "
+                "last known-good trust marks."
+            )
+            fetched = json.loads(self.trust_marks)
+
+        self._v_trust_marks_cache = {"fetched_at": now, "trust_marks": fetched}
+        self._warn_if_trust_marks_expiring(fetched)
+        return fetched
+
+    def _warn_if_trust_marks_expiring(
+        self, trust_marks, warn_within=TRUST_MARK_EXPIRY_WARNING
+    ):
+        now = time.time()
+        for trust_mark in trust_marks or []:
+            try:
+                exp = unpad_jwt_payload(trust_mark["trust_mark"])["exp"]
+            except Exception:
+                logger.warning(f"Could not read exp from trust mark {trust_mark}")
+                continue
+            remaining_days = (exp - now) / 86400
+            if remaining_days < 0:
+                logger.warning(
+                    f"Trust mark {trust_mark.get('id')} expired "
+                    f"{-remaining_days:.1f} days ago"
+                )
+            elif remaining_days < warn_within / 86400:
+                logger.warning(
+                    f"Trust mark {trust_mark.get('id')} expires in "
+                    f"{remaining_days:.1f} days"
+                )
 
     # def challenge(self, request, response):
     #     """Assert via the response that credentials will be gathered.

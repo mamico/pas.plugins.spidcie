@@ -91,7 +91,7 @@ class EntityConfiguration(BrowserView):
             #         "id": "https://preprod.oidc.registry.servizicie.interno.gov.it/openid_relying_party/public",
             #     },
             # ],
-            "trust_marks": json.loads(self.pas.trust_marks),
+            "trust_marks": self.pas.get_current_trust_marks(),
             "authority_hints": list(self.pas.autority_hints),
         }
 
