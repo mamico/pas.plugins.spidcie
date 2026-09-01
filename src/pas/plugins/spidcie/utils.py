@@ -345,9 +345,11 @@ def get_pkce(code_challenge_method: str = "S256", code_challenge_length: int = 6
 
 
 def get_http_url(urls: list, httpc_params: dict = {}) -> list:
+    httpc_params = {"timeout": 8, **httpc_params}
     responses = []
     for i in urls:
-        res = requests.get(i, **httpc_params)  # nosec - B113
+        # timeout is always set above, ruff can't see it through **httpc_params
+        res = requests.get(i, **httpc_params)  # noqa: S113
         responses.append(res.content.decode())
     return responses
 

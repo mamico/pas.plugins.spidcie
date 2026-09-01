@@ -162,6 +162,14 @@ ignore = [
 [tool.coverage.run]
 omit = ["*/locales/*"]
 
+[tool.ruff]
+extend-exclude = ["src/pas/plugins/spidcie/locales"]
+
+[tool.ruff.lint]
+# flake8-bandit rules ported to ruff: the SAST replacement for bandit,
+# run by .github/workflows/sast.yml
+select = ["S"]
+
 ##
 # Add extra configuration options in .meta.toml:
 #  [pyproject]

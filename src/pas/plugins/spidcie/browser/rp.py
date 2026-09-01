@@ -162,7 +162,7 @@ class OAuth2AuthorizationCodeGrant:
             token_endpoint_url,
             data=grant_data,
             # verify=HTTPC_PARAMS["connection"]["ssl"],
-            # timeout=HTTPC_TIMEOUT,
+            timeout=8,
         )
         token_request = None
         if res.status_code != 200:  # pragma: no cover
@@ -202,9 +202,7 @@ class OidcUserInfo:
             provider_conf["userinfo_endpoint"],
             headers=headers,
             verify=verify,
-            # timeout=getattr(
-            #     settings, "HTTPC_TIMEOUT", 8
-            # ) # nosec - B113
+            timeout=8,
         )
 
         if authz_userinfo.status_code != 200:  # pragma: no cover
