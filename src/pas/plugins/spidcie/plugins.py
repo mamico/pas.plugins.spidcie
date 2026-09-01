@@ -492,15 +492,22 @@ class OIDCPlugin(BasePlugin):
 
         Trust marks are short-lived (e.g. 24h for CIE) and are never renewed
         on their own: without refreshing them here, this RP stops being
-        accepted by the OP the day after whatever trust mark was last set on
-        the `trust_marks` property, silently and with nothing in the logs.
+        accepted by the OP the day after onboarding, silently and with
+        nothing in the logs.
 
-        Cached in memory only (a `_v_` volatile attribute, not persisted to
-        the ZODB): this is cheap to refetch and changes often enough that
-        writing it to the database on every refresh would be the same kind
-        of mistake as the session-store growth issue this plugin also had.
-        Falls back to the static `trust_marks` property if the registry is
-        unreachable, so a transient network error doesn't take login down.
+        On every successful fetch, the result is persisted back onto the
+        `trust_marks` property itself -- it stops being a value an admin
+        sets once by hand and instead becomes an auto-updated "last known
+        good" cache. That matters for the failure path: falling back to a
+        value nothing ever refreshes (what this used to do) is no fallback
+        at all, since by definition it will always be expired too. Falling
+        back to the last trust marks that were *actually* accepted degrades
+        far more gracefully, and also survives a process restart, unlike
+        the in-memory `_v_` cache checked first below (kept because this is
+        cheap enough to refetch, every few hours, that hitting the ZODB for
+        it on every request would be unnecessary -- unlike a per-login
+        write, a write every few hours here is not the mistake the
+        session-store growth issue was).
         """
         from .trustchain import resolve_trust_marks
 
@@ -516,11 +523,14 @@ class OIDCPlugin(BasePlugin):
             except Exception:
                 logger.exception(f"Failed to resolve trust marks from {anchor}")
 
-        if not fetched:
+        if fetched:
+            alsoProvides(api.env.getRequest(), IDisableCSRFProtection)
+            self.trust_marks = json.dumps(fetched)
+        else:
             logger.warning(
                 "Could not refresh trust marks from any federation registry "
                 f"({', '.join(self.autority_hints)}); falling back to the "
-                "statically configured trust_marks property."
+                "last known-good trust marks."
             )
             fetched = json.loads(self.trust_marks)
 
