@@ -1,6 +1,7 @@
 from . import logger
 from .jwks import create_jwk
 from .jwks import public_jwk_from_private_jwk
+from .jwtse import unpad_jwt_payload
 from AccessControl import ClassSecurityInfo
 from AccessControl.class_init import InitializeClass
 from contextlib import contextmanager
@@ -30,9 +31,16 @@ import itertools
 import json
 import plone.api as api
 import string
+import time
 
 
 PWCHARS = string.ascii_letters + string.digits + string.punctuation
+
+# Trust marks are short-lived (e.g. 24h for CIE): cache refreshes fairly
+# often, and warn well before expiry so a renewal failure is noticed instead
+# of silently breaking login the next day.
+TRUST_MARK_CACHE_TTL = 6 * 3600
+TRUST_MARK_EXPIRY_WARNING = 24 * 3600
 
 
 def format_redirect_uris(uris: List[str]) -> List[str]:
@@ -478,6 +486,69 @@ class OIDCPlugin(BasePlugin):
         if not hasattr(self, "_trust_chains"):
             self._trust_chains = PersistentMapping()
         self._trust_chains[subject] = tc
+
+    def get_current_trust_marks(self):
+        """Return the RP's trust marks, refreshed from the federation registry.
+
+        Trust marks are short-lived (e.g. 24h for CIE) and are never renewed
+        on their own: without refreshing them here, this RP stops being
+        accepted by the OP the day after whatever trust mark was last set on
+        the `trust_marks` property, silently and with nothing in the logs.
+
+        Cached in memory only (a `_v_` volatile attribute, not persisted to
+        the ZODB): this is cheap to refetch and changes often enough that
+        writing it to the database on every refresh would be the same kind
+        of mistake as the session-store growth issue this plugin also had.
+        Falls back to the static `trust_marks` property if the registry is
+        unreachable, so a transient network error doesn't take login down.
+        """
+        from .trustchain import resolve_trust_marks
+
+        cache = getattr(self, "_v_trust_marks_cache", None)
+        now = time.time()
+        if cache and now - cache["fetched_at"] < TRUST_MARK_CACHE_TTL:
+            return cache["trust_marks"]
+
+        fetched = []
+        for anchor in self.autority_hints:
+            try:
+                fetched.extend(resolve_trust_marks(self.get_subject(), anchor))
+            except Exception:
+                logger.exception(f"Failed to resolve trust marks from {anchor}")
+
+        if not fetched:
+            logger.warning(
+                "Could not refresh trust marks from any federation registry "
+                f"({', '.join(self.autority_hints)}); falling back to the "
+                "statically configured trust_marks property."
+            )
+            fetched = json.loads(self.trust_marks)
+
+        self._v_trust_marks_cache = {"fetched_at": now, "trust_marks": fetched}
+        self._warn_if_trust_marks_expiring(fetched)
+        return fetched
+
+    def _warn_if_trust_marks_expiring(
+        self, trust_marks, warn_within=TRUST_MARK_EXPIRY_WARNING
+    ):
+        now = time.time()
+        for trust_mark in trust_marks or []:
+            try:
+                exp = unpad_jwt_payload(trust_mark["trust_mark"])["exp"]
+            except Exception:
+                logger.warning(f"Could not read exp from trust mark {trust_mark}")
+                continue
+            remaining_hours = (exp - now) / 3600
+            if remaining_hours < 0:
+                logger.warning(
+                    f"Trust mark {trust_mark.get('id')} expired "
+                    f"{-remaining_hours:.1f}h ago"
+                )
+            elif remaining_hours < warn_within / 3600:
+                logger.warning(
+                    f"Trust mark {trust_mark.get('id')} expires in "
+                    f"{remaining_hours:.1f}h"
+                )
 
     # def challenge(self, request, response):
     #     """Assert via the response that credentials will be gathered.

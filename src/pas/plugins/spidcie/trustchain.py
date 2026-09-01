@@ -6,14 +6,17 @@ from .exceptions import InvalidRequiredTrustMark
 from .exceptions import InvalidTrustchain
 from .exceptions import MetadataDiscoveryException
 from .exceptions import TrustchainMissingMetadata
+from .jwtse import unpad_jwt_payload
 from .policy import apply_policy
 from .statements import EntityConfiguration
 from .statements import get_entity_configurations
 from .utils import datetime_from_timestamp
+from .utils import get_http_url
 
 # from .utils import iat_now
 from collections import OrderedDict
 from datetime import datetime
+from urllib.parse import urlencode
 
 
 try:
@@ -27,6 +30,36 @@ import logging
 
 
 logger = logging.getLogger(__name__)
+
+
+def resolve_trust_marks(client_id: str, anchor: str, httpc_params: dict = {}) -> list:
+    """
+    Fetch this RP's current trust marks from the anchor's resolve endpoint.
+
+    https://openid.net/specs/openid-federation-1_0.html#name-resolve-endpoint
+
+    The registry doesn't expose a dedicated trust-mark endpoint: the
+    resolve endpoint's response (a signed JWT) carries the RP's up to
+    date `trust_marks` claim, which is what needs to be republished in
+    our own Entity Configuration for the RP to keep being accepted by
+    the OP (trust marks are short-lived, e.g. 24h for CIE, and are never
+    renewed on their own).
+
+    Note: the resolve response's signature is not verified here. That's
+    consistent with the trust decision that actually matters happening
+    downstream, at the OP, which independently verifies whatever trust
+    mark we present against the anchor itself during login -- a forged
+    response here can only make our RP wrongly believe it has no valid
+    trust mark (failing its own login), not impersonate anything to a
+    third party.
+    """
+    anchor = anchor.rstrip("/")
+    qs = urlencode({"sub": client_id, "anchor": anchor})
+    url = f"{anchor}/resolve?{qs}"
+    httpc_params = {"timeout": 8, **httpc_params}
+    jwt = get_http_url([url], httpc_params)[0]
+    payload = unpad_jwt_payload(jwt)
+    return payload.get("trust_marks", [])
 
 
 class FetchedEntityStatement:
@@ -124,7 +157,7 @@ class TrustChain:
         return self.is_active and ENTITY_STATUS[self.status]
 
     def __str__(self):
-        return "{} [{}] [{}]".format(self.sub, self.trust_anchor, self.is_valid)
+        return f"{self.sub} [{self.trust_anchor}] [{self.is_valid}]"
 
     def update(self, **kwargs):
         # TODO: update the trust chain in the plugin storage
@@ -191,7 +224,7 @@ def get_or_create_trust_chain(
     tc = pas.get_trust_chain(subject, trust_anchor)
 
     if tc and not tc.is_active:
-        # if manualy disabled by staff
+        # if manually disabled by staff
         return None
     elif force or not tc or tc.is_expired:
         tc_builder = trust_chain_builder(
@@ -305,7 +338,6 @@ class TrustChainBuilder:
         #
         **kwargs,
     ) -> None:
-
         self.subject = subject
         self.subject_configuration = subject_configuration
         self.httpc_params = httpc_params
