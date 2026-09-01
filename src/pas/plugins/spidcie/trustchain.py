@@ -6,7 +6,10 @@ from .exceptions import InvalidRequiredTrustMark
 from .exceptions import InvalidTrustchain
 from .exceptions import MetadataDiscoveryException
 from .exceptions import TrustchainMissingMetadata
+from .exceptions import UnknownKid
+from .jwtse import unpad_jwt_head
 from .jwtse import unpad_jwt_payload
+from .jwtse import verify_jws
 from .policy import apply_policy
 from .statements import EntityConfiguration
 from .statements import get_entity_configurations
@@ -39,25 +42,41 @@ def resolve_trust_marks(client_id: str, anchor: str, httpc_params: dict = {}) ->
     https://openid.net/specs/openid-federation-1_0.html#name-resolve-endpoint
 
     The registry doesn't expose a dedicated trust-mark endpoint: the
-    resolve endpoint's response (a signed JWT) carries the RP's up to
-    date `trust_marks` claim, which is what needs to be republished in
-    our own Entity Configuration for the RP to keep being accepted by
-    the OP (trust marks are short-lived, e.g. 24h for CIE, and are never
-    renewed on their own).
+    resolve endpoint's response (a signed JWT) carries the RP's up to date
+    `trust_marks` claim, which is what needs to be republished in our own
+    Entity Configuration for the RP to keep being accepted by the OP.
 
-    Note: the resolve response's signature is not verified here. That's
-    consistent with the trust decision that actually matters happening
-    downstream, at the OP, which independently verifies whatever trust
-    mark we present against the anchor itself during login -- a forged
-    response here can only make our RP wrongly believe it has no valid
-    trust mark (failing its own login), not impersonate anything to a
-    third party.
+    Note this is *not* the same value shown in the federation portal's UI:
+    on at least one observed case the portal displayed a trust mark with a
+    few hours left before expiry, while /resolve returned one valid for
+    another ~7 months. Always get it from here, not by copying it out of
+    the portal -- see the README.
+
+    The response is verified against the anchor's own current Entity
+    Configuration (fetched fresh here, not cached: this only runs on a
+    cache-miss, at most a couple of times a day). This matters because the
+    result gets persisted as the RP's "last known good" trust marks (see
+    OIDCPlugin.get_current_trust_marks): an unverified response would let
+    a single successful spoof poison that fallback durably, surviving
+    restarts, rather than just failing the one refresh it targeted.
     """
     anchor = anchor.rstrip("/")
     qs = urlencode({"sub": client_id, "anchor": anchor})
     url = f"{anchor}/resolve?{qs}"
     httpc_params = {"timeout": 8, **httpc_params}
     jwt = get_http_url([url], httpc_params)[0]
+
+    anchor_jwt = get_entity_configurations([anchor], httpc_params)[0]
+    anchor_ec = EntityConfiguration(anchor_jwt, httpc_params=httpc_params)
+    anchor_ec.validate_by_itself()
+    kid = unpad_jwt_head(jwt).get("kid")
+    if kid not in anchor_ec.kids:
+        raise UnknownKid(
+            f"Resolve response from {anchor} signed with {kid}, "
+            f"not found in its own published jwks {anchor_ec.kids}"
+        )
+    verify_jws(jwt, anchor_ec.jwks[anchor_ec.kids.index(kid)])
+
     payload = unpad_jwt_payload(jwt)
     return payload.get("trust_marks", [])
 

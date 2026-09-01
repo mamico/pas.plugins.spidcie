@@ -50,6 +50,20 @@ pip install pas.plugins.spidcie
 * Go to the Add-ons control panel and install `pas.plugins.spidcie`.
 * In the ZMI go to the plugin properties at `http://localhost:8080/Plone/acl_users/oidc/manage_propertiesForm`
 
+### Trust marks
+
+The `trust_marks` property is refreshed automatically from the federation
+registry's `/resolve` endpoint and should not normally need manual editing;
+it's kept as a fallback for when the registry can't be reached.
+
+If you do need to set it by hand, get the value from `/resolve`
+(`https://<anchor>/resolve?sub=<client_id>&anchor=<anchor>`), **not** from
+what the federation portal's UI shows you. The two can differ significantly:
+on one site the portal displayed a trust mark with only a few hours left
+before expiry, while `/resolve` returned one valid for several more months.
+Copying the portal's value gives the RP a trust mark that looks fine at
+setup time and then expires far sooner than expected.
+
 
 ## License
 

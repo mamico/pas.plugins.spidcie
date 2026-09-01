@@ -36,11 +36,16 @@ import time
 
 PWCHARS = string.ascii_letters + string.digits + string.punctuation
 
-# Trust marks are short-lived (e.g. 24h for CIE): cache refreshes fairly
-# often, and warn well before expiry so a renewal failure is noticed instead
-# of silently breaking login the next day.
-TRUST_MARK_CACHE_TTL = 6 * 3600
-TRUST_MARK_EXPIRY_WARNING = 24 * 3600
+# Trust marks turned out to be valid for months (~1 year observed via
+# /resolve for CIE), not the ~24h the portal's own UI misleadingly
+# suggests -- see resolve_trust_marks()'s docstring and the README. A
+# daily refresh is therefore plenty, and the warning threshold needs to
+# be weeks, not hours: at 24h-before-expiry, a months-long validity
+# window means the warning would fire the day before a failure nobody
+# has time left to react to. This is what let the underlying renewal
+# failure go unnoticed for 17 months on the site that prompted this fix.
+TRUST_MARK_CACHE_TTL = 24 * 3600
+TRUST_MARK_EXPIRY_WARNING = 30 * 24 * 3600
 
 
 def format_redirect_uris(uris: List[str]) -> List[str]:
@@ -490,10 +495,12 @@ class OIDCPlugin(BasePlugin):
     def get_current_trust_marks(self):
         """Return the RP's trust marks, refreshed from the federation registry.
 
-        Trust marks are short-lived (e.g. 24h for CIE) and are never renewed
-        on their own: without refreshing them here, this RP stops being
-        accepted by the OP the day after onboarding, silently and with
-        nothing in the logs.
+        Trust marks are valid for months (not the ~24h the federation
+        portal's own UI misleadingly suggests -- see resolve_trust_marks)
+        but are never renewed on their own: without refreshing them here,
+        this RP eventually stops being accepted by the OP, silently and
+        with nothing in the logs, and the long validity window is what
+        lets that go unnoticed for a long time rather than a day.
 
         On every successful fetch, the result is persisted back onto the
         `trust_marks` property itself -- it stops being a value an admin
@@ -504,10 +511,10 @@ class OIDCPlugin(BasePlugin):
         back to the last trust marks that were *actually* accepted degrades
         far more gracefully, and also survives a process restart, unlike
         the in-memory `_v_` cache checked first below (kept because this is
-        cheap enough to refetch, every few hours, that hitting the ZODB for
-        it on every request would be unnecessary -- unlike a per-login
-        write, a write every few hours here is not the mistake the
-        session-store growth issue was).
+        cheap enough to refetch daily that hitting the ZODB on every
+        request would be unnecessary; also incidentally fixes a real
+        problem the previous property-only read had, where a change only
+        took effect for a given process after it was restarted).
         """
         from .trustchain import resolve_trust_marks
 
@@ -524,8 +531,17 @@ class OIDCPlugin(BasePlugin):
                 logger.exception(f"Failed to resolve trust marks from {anchor}")
 
         if fetched:
-            alsoProvides(api.env.getRequest(), IDisableCSRFProtection)
-            self.trust_marks = json.dumps(fetched)
+            serialized = json.dumps(fetched)
+            if serialized != self.trust_marks:
+                # only write when it actually changed: this refreshes at
+                # most daily and, with a months-long validity, would
+                # otherwise write an identical blob on every refresh --
+                # in a history-preserving ZODB, a needless revision kept
+                # around until the next pack. The exact mistake the other
+                # PR in this package exists to fix, just at a much smaller
+                # scale here.
+                alsoProvides(api.env.getRequest(), IDisableCSRFProtection)
+                self.trust_marks = serialized
         else:
             logger.warning(
                 "Could not refresh trust marks from any federation registry "
@@ -548,16 +564,16 @@ class OIDCPlugin(BasePlugin):
             except Exception:
                 logger.warning(f"Could not read exp from trust mark {trust_mark}")
                 continue
-            remaining_hours = (exp - now) / 3600
-            if remaining_hours < 0:
+            remaining_days = (exp - now) / 86400
+            if remaining_days < 0:
                 logger.warning(
                     f"Trust mark {trust_mark.get('id')} expired "
-                    f"{-remaining_hours:.1f}h ago"
+                    f"{-remaining_days:.1f} days ago"
                 )
-            elif remaining_hours < warn_within / 3600:
+            elif remaining_days < warn_within / 86400:
                 logger.warning(
                     f"Trust mark {trust_mark.get('id')} expires in "
-                    f"{remaining_hours:.1f}h"
+                    f"{remaining_days:.1f} days"
                 )
 
     # def challenge(self, request, response):
